@@ -20,6 +20,7 @@
           gcc
           bacon
           sqlite
+          postgresql
           rust-analyzer
           rustfmt
           clippy
@@ -41,12 +42,11 @@
       nativeBuildInputs = with pkgs; [ rust pkg-config ];
     in
     with pkgs;
-    {      
+    {
       devShells.default = mkShell {
         inherit buildInputs nativeBuildInputs;
         LD_LIBRARY_PATH = nixpkgs.legacyPackages.x86_64-linux.lib.makeLibraryPath buildInputs;
         RUST_BACKTRACE = 1;
-        DATABASE_URL = "sqlite://data/sqlite.db";
       };
     });
 }
