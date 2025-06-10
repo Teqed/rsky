@@ -1,8 +1,7 @@
-// @generated automatically by Diesel CLI.
-
+#![allow(unnameable_types, unused_qualifications)]
 pub mod pds {
     diesel::table! {
-        pds.account (did) {
+        account (did) {
             did -> Varchar,
             email -> Varchar,
             recoveryKey -> Nullable<Varchar>,
@@ -14,16 +13,7 @@ pub mod pds {
     }
 
     diesel::table! {
-        pds.account_pref (id) {
-            id -> Int4,
-            did -> Varchar,
-            name -> Varchar,
-            valueJson -> Nullable<Text>,
-        }
-    }
-
-    diesel::table! {
-        pds.actor (did) {
+        actor (did) {
             did -> Varchar,
             handle -> Nullable<Varchar>,
             createdAt -> Varchar,
@@ -34,7 +24,7 @@ pub mod pds {
     }
 
     diesel::table! {
-        pds.app_password (did, name) {
+        app_password (did, name) {
             did -> Varchar,
             name -> Varchar,
             password -> Varchar,
@@ -43,28 +33,144 @@ pub mod pds {
     }
 
     diesel::table! {
-        pds.authorization_request (id) {
+        authorization_request (id) {
             id -> Varchar,
             did -> Nullable<Varchar>,
             deviceId -> Nullable<Varchar>,
             clientId -> Varchar,
             clientAuth -> Varchar,
             parameters -> Varchar,
-            expiresAt -> Timestamptz,
+            expiresAt -> TimestamptzSqlite,
             code -> Nullable<Varchar>,
         }
     }
 
     diesel::table! {
-        pds.backlink (uri, path) {
-            uri -> Varchar,
-            path -> Varchar,
-            linkTo -> Varchar,
+        device (id) {
+            id -> Varchar,
+            sessionId -> Nullable<Varchar>,
+            userAgent -> Nullable<Varchar>,
+            ipAddress -> Varchar,
+            lastSeenAt -> TimestamptzSqlite,
         }
     }
 
     diesel::table! {
-        pds.blob (cid, did) {
+        device_account (deviceId, did) {
+            did -> Varchar,
+            deviceId -> Varchar,
+            authenticatedAt -> TimestamptzSqlite,
+            remember -> Bool,
+            authorizedClients -> Varchar,
+        }
+    }
+
+    diesel::table! {
+        did_doc (did) {
+            did -> Varchar,
+            doc -> Text,
+            updatedAt -> Int8,
+        }
+    }
+
+    diesel::table! {
+        email_token (purpose, did) {
+            purpose -> Varchar,
+            did -> Varchar,
+            token -> Varchar,
+            requestedAt -> Varchar,
+        }
+    }
+
+    diesel::table! {
+        invite_code (code) {
+            code -> Varchar,
+            availableUses -> Int4,
+            disabled -> Int2,
+            forAccount -> Varchar,
+            createdBy -> Varchar,
+            createdAt -> Varchar,
+        }
+    }
+
+    diesel::table! {
+        invite_code_use (code, usedBy) {
+            code -> Varchar,
+            usedBy -> Varchar,
+            usedAt -> Varchar,
+        }
+    }
+
+    diesel::table! {
+        refresh_token (id) {
+            id -> Varchar,
+            did -> Varchar,
+            expiresAt -> Varchar,
+            nextId -> Nullable<Varchar>,
+            appPasswordName -> Nullable<Varchar>,
+        }
+    }
+
+    diesel::table! {
+        repo_seq (seq) {
+            seq -> Int8,
+            did -> Varchar,
+            eventType -> Varchar,
+            event -> Bytea,
+            invalidated -> Int2,
+            sequencedAt -> Varchar,
+        }
+    }
+
+    diesel::table! {
+        token (id) {
+            id -> Varchar,
+            did -> Varchar,
+            tokenId -> Varchar,
+            createdAt -> TimestamptzSqlite,
+            updatedAt -> TimestamptzSqlite,
+            expiresAt -> TimestamptzSqlite,
+            clientId -> Varchar,
+            clientAuth -> Varchar,
+            deviceId -> Nullable<Varchar>,
+            parameters -> Varchar,
+            details -> Nullable<Varchar>,
+            code -> Nullable<Varchar>,
+            currentRefreshToken -> Nullable<Varchar>,
+        }
+    }
+
+    diesel::table! {
+        used_refresh_token (refreshToken) {
+            refreshToken -> Varchar,
+            tokenId -> Varchar,
+        }
+    }
+
+    diesel::allow_tables_to_appear_in_same_query!(
+        account,
+        actor,
+        app_password,
+        authorization_request,
+        device,
+        device_account,
+        did_doc,
+        email_token,
+        invite_code,
+        invite_code_use,
+        refresh_token,
+        repo_seq,
+        token,
+        used_refresh_token,
+    );
+}
+
+pub mod actor_store {
+    // Actor Store
+
+    // Blob
+    diesel::table! {
+        blob (cid, did) {
             cid -> Varchar,
             did -> Varchar,
             mimeType -> Varchar,
@@ -78,63 +184,27 @@ pub mod pds {
     }
 
     diesel::table! {
-        pds.device (id) {
-            id -> Varchar,
-            sessionId -> Nullable<Varchar>,
-            userAgent -> Nullable<Varchar>,
-            ipAddress -> Varchar,
-            lastSeenAt -> Timestamptz,
-        }
-    }
-
-    diesel::table! {
-        pds.device_account (deviceId, did) {
+        record_blob (blobCid, recordUri) {
+            blobCid -> Varchar,
+            recordUri -> Varchar,
             did -> Varchar,
-            deviceId -> Varchar,
-            authenticatedAt -> Timestamptz,
-            remember -> Bool,
-            authorizedClients -> Varchar,
         }
     }
 
+    // Preference
+
     diesel::table! {
-        pds.did_doc (did) {
+        account_pref (id) {
+            id -> Int4,
             did -> Varchar,
-            doc -> Text,
-            updatedAt -> Int8,
+            name -> Varchar,
+            valueJson -> Nullable<Text>,
         }
     }
+    // Record
 
     diesel::table! {
-        pds.email_token (purpose, did) {
-            purpose -> Varchar,
-            did -> Varchar,
-            token -> Varchar,
-            requestedAt -> Varchar,
-        }
-    }
-
-    diesel::table! {
-        pds.invite_code (code) {
-            code -> Varchar,
-            availableUses -> Int4,
-            disabled -> Int2,
-            forAccount -> Varchar,
-            createdBy -> Varchar,
-            createdAt -> Varchar,
-        }
-    }
-
-    diesel::table! {
-        pds.invite_code_use (code, usedBy) {
-            code -> Varchar,
-            usedBy -> Varchar,
-            usedAt -> Varchar,
-        }
-    }
-
-    diesel::table! {
-        pds.record (uri) {
+        record (uri) {
             uri -> Varchar,
             cid -> Varchar,
             did -> Varchar,
@@ -147,25 +217,7 @@ pub mod pds {
     }
 
     diesel::table! {
-        pds.record_blob (blobCid, recordUri) {
-            blobCid -> Varchar,
-            recordUri -> Varchar,
-            did -> Varchar,
-        }
-    }
-
-    diesel::table! {
-        pds.refresh_token (id) {
-            id -> Varchar,
-            did -> Varchar,
-            expiresAt -> Varchar,
-            nextId -> Nullable<Varchar>,
-            appPasswordName -> Nullable<Varchar>,
-        }
-    }
-
-    diesel::table! {
-        pds.repo_block (cid, did) {
+        repo_block (cid, did) {
             cid -> Varchar,
             did -> Varchar,
             repoRev -> Varchar,
@@ -175,7 +227,16 @@ pub mod pds {
     }
 
     diesel::table! {
-        pds.repo_root (did) {
+        backlink (uri, path) {
+            uri -> Varchar,
+            path -> Varchar,
+            linkTo -> Varchar,
+        }
+    }
+    // sql_repo
+
+    diesel::table! {
+        repo_root (did) {
             did -> Varchar,
             cid -> Varchar,
             rev -> Varchar,
@@ -183,63 +244,13 @@ pub mod pds {
         }
     }
 
-    diesel::table! {
-        pds.repo_seq (seq) {
-            seq -> Int8,
-            did -> Varchar,
-            eventType -> Varchar,
-            event -> Bytea,
-            invalidated -> Int2,
-            sequencedAt -> Varchar,
-        }
-    }
-
-    diesel::table! {
-        pds.token (id) {
-            id -> Varchar,
-            did -> Varchar,
-            tokenId -> Varchar,
-            createdAt -> Timestamptz,
-            updatedAt -> Timestamptz,
-            expiresAt -> Timestamptz,
-            clientId -> Varchar,
-            clientAuth -> Varchar,
-            deviceId -> Nullable<Varchar>,
-            parameters -> Varchar,
-            details -> Nullable<Varchar>,
-            code -> Nullable<Varchar>,
-            currentRefreshToken -> Nullable<Varchar>,
-        }
-    }
-
-    diesel::table! {
-        pds.used_refresh_token (refreshToken) {
-            refreshToken -> Varchar,
-            tokenId -> Varchar,
-        }
-    }
-
     diesel::allow_tables_to_appear_in_same_query!(
-        account,
         account_pref,
-        actor,
-        app_password,
-        authorization_request,
         backlink,
         blob,
-        device,
-        device_account,
-        did_doc,
-        email_token,
-        invite_code,
-        invite_code_use,
         record,
         record_blob,
-        refresh_token,
         repo_block,
         repo_root,
-        repo_seq,
-        token,
-        used_refresh_token,
     );
 }

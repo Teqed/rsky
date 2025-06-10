@@ -1,21 +1,27 @@
 use crate::actor_store::preference::util::pref_in_scope;
 use crate::auth_verifier::AuthScope;
-use crate::db::DbConn;
-use crate::models;
-use crate::models::AccountPref;
+use crate::models::models::actor_store::AccountPref;
 use anyhow::{bail, Result};
 use diesel::*;
 use rsky_lexicon::app::bsky::actor::RefPreferences;
-use std::sync::Arc;
 
 pub struct PreferenceReader {
     pub did: String,
-    pub db: Arc<DbConn>,
+    pub db: deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
 }
 
 impl PreferenceReader {
-    pub fn new(did: String, db: Arc<DbConn>) -> Self {
-        PreferenceReader { did, db }
+    pub const fn new(
+        did: String,
+        db: deadpool_diesel::Pool<
+            deadpool_diesel::Manager<SqliteConnection>,
+            deadpool_diesel::sqlite::Object,
+        >,
+    ) -> Self {
+        Self { did, db }
     }
 
     pub async fn get_preferences(
@@ -23,11 +29,13 @@ impl PreferenceReader {
         namespace: Option<String>,
         scope: AuthScope,
     ) -> Result<Vec<RefPreferences>> {
-        use crate::schema::pds::account_pref::dsl as AccountPrefSchema;
+        use crate::schema::actor_store::account_pref::dsl as AccountPrefSchema;
 
         let did = self.did.clone();
         self.db
-            .run(move |conn| {
+            .get()
+            .await?
+            .interact(move |conn| {
                 let prefs_res = AccountPrefSchema::account_pref
                     .filter(AccountPrefSchema::did.eq(&did))
                     .select(AccountPref::as_select())
@@ -35,9 +43,10 @@ impl PreferenceReader {
                     .load(conn)?;
                 let account_prefs = prefs_res
                     .into_iter()
-                    .filter(|pref| match &namespace {
-                        None => true,
-                        Some(namespace) => pref_match_namespace(namespace, &pref.name),
+                    .filter(|pref| {
+                        namespace
+                            .as_ref()
+                            .is_none_or(|namespace| pref_match_namespace(namespace, &pref.name))
                     })
                     .filter(|pref| pref_in_scope(scope.clone(), pref.name.clone()))
                     .map(|pref| {
@@ -54,6 +63,7 @@ impl PreferenceReader {
                 Ok(account_prefs)
             })
             .await
+            .expect("Failed to get preferences")
     }
 
     #[tracing::instrument(skip_all)]
@@ -65,18 +75,19 @@ impl PreferenceReader {
     ) -> Result<()> {
         let did = self.did.clone();
         self.db
-            .run(move |conn| {
+            .get()
+            .await?
+            .interact(move |conn| {
                 match values
                     .iter()
                     .all(|value| pref_match_namespace(&namespace, &value.get_type()))
                 {
                     false => bail!("Some preferences are not in the {namespace} namespace"),
                     true => {
-                        let not_in_scope = values
+                        if values
                             .iter()
-                            .filter(|value| !pref_in_scope(scope.clone(), value.get_type()))
-                            .collect::<Vec<&RefPreferences>>();
-                        if !not_in_scope.is_empty() {
+                            .any(|value| !pref_in_scope(scope.clone(), value.get_type()))
+                        {
                             tracing::info!(
                         "@LOG: PreferenceReader::put_preferences() debug scope: {:?}, values: {:?}",
                         scope,
@@ -85,10 +96,10 @@ impl PreferenceReader {
                             bail!("Do not have authorization to set preferences.");
                         }
                         // get all current prefs for user and prep new pref rows
-                        use crate::schema::pds::account_pref::dsl as AccountPrefSchema;
+                        use crate::schema::actor_store::account_pref::dsl as AccountPrefSchema;
                         let all_prefs = AccountPrefSchema::account_pref
                             .filter(AccountPrefSchema::did.eq(&did))
-                            .select(models::AccountPref::as_select())
+                            .select(AccountPref::as_select())
                             .load(conn)?;
                         let put_prefs = values
                             .into_iter()
@@ -109,12 +120,12 @@ impl PreferenceReader {
                             .collect::<Vec<i32>>();
                         // replace all prefs in given namespace
                         if !all_pref_ids_in_namespace.is_empty() {
-                            delete(AccountPrefSchema::account_pref)
+                            _ = delete(AccountPrefSchema::account_pref)
                                 .filter(AccountPrefSchema::id.eq_any(all_pref_ids_in_namespace))
                                 .execute(conn)?;
                         }
                         if !put_prefs.is_empty() {
-                            insert_into(AccountPrefSchema::account_pref)
+                            _ = insert_into(AccountPrefSchema::account_pref)
                                 .values(
                                     put_prefs
                                         .into_iter()
@@ -134,6 +145,7 @@ impl PreferenceReader {
                 }
             })
             .await
+            .expect("Failed to put preferences")
     }
 }
 

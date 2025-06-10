@@ -1,6 +1,6 @@
-use crate::db::DbConn;
-use crate::models::models;
+use crate::models::models::pds as models;
 use anyhow::Result;
+use diesel::*;
 use diesel::{
     delete, insert_into, update, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
 };
@@ -19,81 +19,103 @@ fn row_to_device_data(device: models::Device) -> DeviceData {
     }
 }
 
-pub async fn create_device(device_id: DeviceId, data: DeviceData, db: &DbConn) -> Result<()> {
+pub async fn create_device(
+    device_id: DeviceId,
+    data: DeviceData,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<()> {
     use crate::schema::pds::device::dsl as DeviceSchema;
-    db.run(move |conn| {
-        let rows: Vec<models::Device> = vec![models::Device {
-            id: device_id.into_inner(),
-            session_id: Some(data.session_id.into_inner()),
-            user_agent: data.user_agent,
-            ip_address: data.ip_address.to_string(),
-            last_seen_at: data.last_seen_at,
-        }];
-        insert_into(DeviceSchema::device)
-            .values(&rows)
-            .execute(conn)
-    })
-    .await?;
+    db.get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
+            let rows: Vec<models::Device> = vec![models::Device {
+                id: device_id.into_inner(),
+                session_id: Some(data.session_id.into_inner()),
+                user_agent: data.user_agent,
+                ip_address: data.ip_address.to_string(),
+                last_seen_at: data.last_seen_at,
+            }];
+            insert_into(DeviceSchema::device)
+                .values(&rows)
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to create device")?;
     Ok(())
 }
 
-pub async fn read_device(device_id: DeviceId, db: &DbConn) -> Result<Option<DeviceData>> {
+pub async fn read_device(
+    device_id: DeviceId,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<Option<DeviceData>> {
     use crate::schema::pds::device::dsl as DeviceSchema;
 
     let device_id = device_id.into_inner();
     let result = db
-        .run(move |conn| {
+        .get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
             DeviceSchema::device
                 .filter(DeviceSchema::id.eq(device_id))
                 .select(models::Device::as_select())
                 .first(conn)
+                .optional()
         })
-        .await?;
-    Ok(Some(row_to_device_data(result)))
+        .await
+        .expect("Failed to read device")?;
+    Ok(result.map(row_to_device_data))
 }
 
 pub async fn update_device(
     device_id: DeviceId,
     opts: PartialDeviceData,
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
 ) -> Result<()> {
     use crate::schema::pds::device::dsl as DeviceSchema;
-    db.run(move |conn| {
-        //TODO
-        // let mut update_list= vec![];
-        // if let Some(user_agent) = opts.user_agent {
-        //     update_list.push(DeviceSchema::user_agent.eq(user_agent));
-        // };
-        // if let Some(ip_address) = opts.ip_address {
-        //     update_list.push(DeviceSchema::ip_address.eq(ip_address));
-        // };
-        // if let Some(session_id) = opts.session_id {
-        //     update_list.push(DeviceSchema::session_id.eq(session_id));
-        // }
-        // if let Some(last_seen_at) = opts.last_seen_at {
-        //     update_list.push(DeviceSchema::last_seen_at.eq(last_seen_at));
-        // }
-        // let update_tuples = update_list
-        // update(DeviceSchema::device)
-        //     .filter(DeviceSchema::id.eq(device_id))
-        //     .set(update_list)
-        //     .execute(conn)
-    })
-    .await;
+    // db.get()
+    //     .await
+    //     .expect("Failed to get DB connection")
+    //     .interact(move |conn| {
+    //         //TODO: Implement update logic as needed
+    //         // See original comments for details
+    //         Ok(())
+    //     })
+    //     .await
+    //     .expect("Failed to update device")?;
     Ok(())
 }
 
-pub async fn delete_device(device_id: DeviceId, db: &DbConn) -> Result<()> {
+pub async fn delete_device(
+    device_id: DeviceId,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<()> {
     use crate::schema::pds::device::dsl as DeviceSchema;
 
     let device_id = device_id.into_inner();
-    db.run(move |conn| {
-        delete(DeviceSchema::device)
-            .filter(DeviceSchema::id.eq(device_id))
-            .execute(conn)
-    })
-    .await?;
-
+    db.get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
+            delete(DeviceSchema::device)
+                .filter(DeviceSchema::id.eq(device_id))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to delete device")?;
     Ok(())
 }
 

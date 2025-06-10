@@ -1,12 +1,10 @@
-use crate::db::DbConn;
-use crate::models::models::AuthorizationRequest;
+use crate::models::models::pds::AuthorizationRequest;
 use crate::schema::pds::authorization_request::dsl as RequestSchema;
 use anyhow::Result;
 use chrono::DateTime;
 use diesel::row::NamedRow;
 use diesel::*;
 use diesel::{delete, insert_into, QueryDsl, RunQueryDsl, SelectableHelper};
-use rsky_common;
 use rsky_oauth::oauth_provider::client::client_auth::ClientAuth;
 use rsky_oauth::oauth_provider::device::device_id::DeviceId;
 use rsky_oauth::oauth_provider::now_as_secs;
@@ -106,106 +104,161 @@ fn request_data_to_row(id: RequestId, data: RequestData) -> AuthorizationRequest
     }
 }
 
-pub async fn create_qb(id: RequestId, data: RequestData, db: &DbConn) -> Result<()> {
+pub async fn create_qb(
+    id: RequestId,
+    data: RequestData,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<()> {
     let value = request_data_to_row(id, data);
-    db.run(move |conn| {
-        let rows: Vec<AuthorizationRequest> = vec![value];
-        insert_into(RequestSchema::authorization_request)
-            .values(&rows)
-            .execute(conn)
-    })
-    .await?;
+    db.get()
+        .await?
+        .interact(move |conn| {
+            let rows: Vec<AuthorizationRequest> = vec![value];
+            insert_into(RequestSchema::authorization_request)
+                .values(&rows)
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to create authorization request")?;
     Ok(())
 }
 
-pub async fn read_qb(id: RequestId, db: &DbConn) -> Result<Option<AuthorizationRequest>> {
+pub async fn read_qb(
+    id: RequestId,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<Option<AuthorizationRequest>> {
     let id = id.into_inner();
     let result = db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             RequestSchema::authorization_request
                 .filter(RequestSchema::id.eq(id))
                 .select(AuthorizationRequest::as_select())
                 .first(conn)
                 .optional()
         })
-        .await?;
+        .await
+        .expect("Failed to read authorization request")?;
     Ok(result)
 }
 
-pub async fn update_qb(id: RequestId, data: UpdateRequestData, db: &DbConn) -> Result<()> {
+pub async fn update_qb(
+    id: RequestId,
+    data: UpdateRequestData,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<()> {
     let id = id.into_inner();
-    db.run(move |conn| {
-        if let Some(code) = data.code {
-            update(RequestSchema::authorization_request)
-                .filter(RequestSchema::id.eq(&id))
-                .set((RequestSchema::code.eq(code.into_inner()),))
-                .execute(conn)?;
-        }
-        if let Some(sub) = data.sub {
-            update(RequestSchema::authorization_request)
-                .filter(RequestSchema::id.eq(&id))
-                .set((RequestSchema::did.eq(sub.get()),))
-                .execute(conn)?;
-        }
-        if let Some(device_id) = data.device_id {
-            update(RequestSchema::authorization_request)
-                .filter(RequestSchema::id.eq(&id))
-                .set((RequestSchema::deviceId.eq(device_id.into_inner()),))
-                .execute(conn)?;
-        }
-        if let Some(expires_at) = data.expires_at {
-            update(RequestSchema::authorization_request)
-                .filter(RequestSchema::id.eq(&id))
-                .set((RequestSchema::expiresAt.eq(expires_at),))
-                .execute(conn)?;
-        }
-        RequestSchema::authorization_request
-            .filter(RequestSchema::id.eq(id))
-            .select(AuthorizationRequest::as_select())
-            .first(conn)
-            .optional()
-    })
-    .await?;
+    db.get()
+        .await?
+        .interact(move |conn| {
+            if let Some(code) = data.code {
+                update(RequestSchema::authorization_request)
+                    .filter(RequestSchema::id.eq(&id))
+                    .set((RequestSchema::code.eq(code.into_inner()),))
+                    .execute(conn)?;
+            }
+            if let Some(sub) = data.sub {
+                update(RequestSchema::authorization_request)
+                    .filter(RequestSchema::id.eq(&id))
+                    .set((RequestSchema::did.eq(sub.get()),))
+                    .execute(conn)?;
+            }
+            if let Some(device_id) = data.device_id {
+                update(RequestSchema::authorization_request)
+                    .filter(RequestSchema::id.eq(&id))
+                    .set((RequestSchema::deviceId.eq(device_id.into_inner()),))
+                    .execute(conn)?;
+            }
+            if let Some(expires_at) = data.expires_at {
+                update(RequestSchema::authorization_request)
+                    .filter(RequestSchema::id.eq(&id))
+                    .set((RequestSchema::expiresAt.eq(expires_at),))
+                    .execute(conn)?;
+            }
+            RequestSchema::authorization_request
+                .filter(RequestSchema::id.eq(id))
+                .select(AuthorizationRequest::as_select())
+                .first(conn)
+                .optional()
+        })
+        .await
+        .expect("Failed to update authorization request")?;
     Ok(())
 }
 
-pub async fn remove_old_expired_qb(delay: Option<i64>, db: &DbConn) {
-    // We allow some delay for the expiration time so that expired requests
-    // can still be returned to the OAuthProvider library for error handling.
+pub async fn remove_old_expired_qb(
+    delay: Option<i64>,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) {
     let delay = delay.unwrap_or(60);
     let expire_time = now_as_secs() - delay;
     let expire_time = DateTime::from_timestamp(expire_time, 0).unwrap();
 
-    db.run(move |conn| {
-        delete(RequestSchema::authorization_request)
-            .filter(RequestSchema::expiresAt.lt(expire_time))
-            .execute(conn)
-    })
-    .await
-    .unwrap();
+    db.get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
+            delete(RequestSchema::authorization_request)
+                .filter(RequestSchema::expiresAt.lt(expire_time))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to remove old expired authorization requests")
+        .expect("Failed to execute delete operation");
 }
 
-pub async fn remove_by_id_qb(id: RequestId, db: &DbConn) -> Result<()> {
+pub async fn remove_by_id_qb(
+    id: RequestId,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<()> {
     let id = id.into_inner();
-    db.run(move |conn| {
-        delete(RequestSchema::authorization_request)
-            .filter(RequestSchema::id.eq(id))
-            .execute(conn)
-    })
-    .await?;
-
+    db.get()
+        .await?
+        .interact(move |conn| {
+            delete(RequestSchema::authorization_request)
+                .filter(RequestSchema::id.eq(id))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to remove authorization request")?;
     Ok(())
 }
 
-pub async fn find_by_code_qb(db: &DbConn, code: Code) -> Result<Option<AuthorizationRequest>> {
+pub async fn find_by_code_qb(
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+    code: Code,
+) -> Result<Option<AuthorizationRequest>> {
     let code = code.into_inner();
     let result = db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             RequestSchema::authorization_request
                 .filter(RequestSchema::code.eq(code))
                 .select(AuthorizationRequest::as_select())
                 .first(conn)
+                .optional()
         })
-        .await?;
-    Ok(Some(result))
+        .await
+        .expect("Failed to find authorization request by code")?;
+    Ok(result)
 }

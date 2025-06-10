@@ -1,19 +1,16 @@
-use crate::actor_store::aws::s3::S3BlobStore;
-use crate::db::DbConn;
 use crate::image;
-use crate::models::models;
+use crate::models::models::actor_store as models;
+
 use anyhow::{bail, Result};
-use aws_sdk_s3::operation::get_object::GetObjectError;
-use aws_sdk_s3::primitives::ByteStream;
+use axum::body::Bytes;
 use diesel::dsl::{count_distinct, exists, not};
-use diesel::result::Error;
 use diesel::sql_types::{Integer, Nullable, Text};
 use diesel::*;
-use futures::stream::{self, StreamExt};
-use futures::try_join;
+use futures::{
+    stream::{self, StreamExt},
+    try_join,
+};
 use lexicon_cid::Cid;
-use rocket::data::{Data, ToByteUnit};
-use rocket::form::validate::Contains;
 use rsky_common::ipld::sha256_to_cid;
 use rsky_common::now;
 use rsky_lexicon::blob_refs::BlobRef;
@@ -22,7 +19,10 @@ use rsky_lexicon::com::atproto::repo::ListMissingBlobsRefRecordBlob;
 use rsky_repo::error::BlobError;
 use rsky_repo::types::{PreparedBlobRef, PreparedWrite};
 use sha2::{Digest, Sha256};
-use std::sync::Arc;
+use std::str::FromStr as _;
+
+pub mod local;
+use local::{BlobStoreFs, ByteStream};
 
 pub struct BlobMetadata {
     pub temp_key: String,
@@ -33,10 +33,17 @@ pub struct BlobMetadata {
     pub height: Option<i32>,
 }
 
+/// Handles blob operations for an actor store
 pub struct BlobReader {
-    pub blobstore: S3BlobStore,
+    /// Local FS based blob storage
+    pub blobstore: BlobStoreFs,
+    /// DID of the actor
     pub did: String,
-    pub db: Arc<DbConn>,
+    /// Database connection
+    pub db: deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
 }
 
 pub struct ListMissingBlobsOpts {
@@ -63,21 +70,31 @@ pub struct GetBlobMetadataOutput {
 
 // Basically handles getting blob records from db
 impl BlobReader {
-    pub fn new(blobstore: S3BlobStore, db: Arc<DbConn>) -> Self {
-        BlobReader {
-            did: blobstore.bucket.clone(),
+    /// Create a new blob reader
+    pub fn new(
+        blobstore: BlobStoreFs,
+        db: deadpool_diesel::Pool<
+            deadpool_diesel::Manager<SqliteConnection>,
+            deadpool_diesel::sqlite::Object,
+        >,
+    ) -> Self {
+        Self {
+            did: blobstore.did.clone(),
             blobstore,
             db,
         }
     }
 
+    /// Get metadata for a blob by CID
     pub async fn get_blob_metadata(&self, cid: Cid) -> Result<GetBlobMetadataOutput> {
-        use crate::schema::pds::blob::dsl as BlobSchema;
+        use crate::schema::actor_store::blob::dsl as BlobSchema;
 
         let did = self.did.clone();
         let found = self
             .db
-            .run(move |conn| {
+            .get()
+            .await?
+            .interact(move |conn| {
                 BlobSchema::blob
                     .filter(BlobSchema::did.eq(did))
                     .filter(BlobSchema::cid.eq(cid.to_string()))
@@ -86,7 +103,8 @@ impl BlobReader {
                     .first(conn)
                     .optional()
             })
-            .await?;
+            .await
+            .expect("Failed to get blob metadata")?;
 
         match found {
             None => bail!("Blob not found"),
@@ -97,19 +115,14 @@ impl BlobReader {
         }
     }
 
+    /// Get a blob by CID with metadata and content
     pub async fn get_blob(&self, cid: Cid) -> Result<GetBlobOutput> {
         let metadata = self.get_blob_metadata(cid).await?;
         let blob_stream = match self.blobstore.get_stream(cid).await {
-            Ok(res) => res,
-            Err(e) => {
-                return match e.downcast_ref() {
-                    Some(GetObjectError::NoSuchKey(key)) => {
-                        Err(anyhow::Error::new(GetObjectError::NoSuchKey(key.clone())))
-                    }
-                    _ => bail!(e.to_string()),
-                }
-            }
+            Ok(stream) => stream,
+            Err(e) => bail!("Failed to get blob: {}", e),
         };
+
         Ok(GetBlobOutput {
             size: metadata.size,
             mime_type: metadata.mime_type,
@@ -117,54 +130,56 @@ impl BlobReader {
         })
     }
 
+    /// Get all records that reference a specific blob
     pub async fn get_records_for_blob(&self, cid: Cid) -> Result<Vec<String>> {
-        use crate::schema::pds::record_blob::dsl as RecordBlobSchema;
+        use crate::schema::actor_store::record_blob::dsl as RecordBlobSchema;
 
         let did = self.did.clone();
         let res = self
             .db
-            .run(move |conn| {
+            .get()
+            .await?
+            .interact(move |conn| {
                 let results = RecordBlobSchema::record_blob
                     .filter(RecordBlobSchema::blobCid.eq(cid.to_string()))
                     .filter(RecordBlobSchema::did.eq(did))
                     .select(models::RecordBlob::as_select())
                     .get_results(conn)?;
-                Ok::<_, Error>(results.into_iter().map(|row| row.record_uri))
+                Ok::<_, result::Error>(results.into_iter().map(|row| row.record_uri))
             })
-            .await?
+            .await
+            .expect("Failed to get records for blob")?
             .collect::<Vec<String>>();
 
         Ok(res)
     }
 
+    /// Upload a blob and get its metadata
     pub async fn upload_blob_and_get_metadata(
         &self,
         user_suggested_mime: String,
-        blob: Data<'_>,
+        blob: Bytes,
     ) -> Result<BlobMetadata> {
-        let blob_stream = blob.open(100.mebibytes());
-        let bytes = blob_stream.into_bytes().await?;
-        let size = bytes.n.written;
-        let bytes = bytes.into_inner();
+        let bytes = blob;
+        let size = bytes.len() as i64;
+
         let (temp_key, sha256, img_info, sniffed_mime) = try_join!(
             self.blobstore.put_temp(bytes.clone()),
-            sha256_stream(bytes.clone()),
-            image::maybe_get_info(bytes.clone()),
-            image::mime_type_from_bytes(bytes.clone())
+            // TODO: reimpl funcs to use Bytes instead of Vec<u8>
+            sha256_stream(bytes.to_vec()),
+            image::maybe_get_info(bytes.to_vec()),
+            image::mime_type_from_bytes(bytes.to_vec())
         )?;
+
         let cid = sha256_to_cid(sha256);
         let mime_type = sniffed_mime.unwrap_or(user_suggested_mime);
 
         Ok(BlobMetadata {
             temp_key,
-            size: size as i64,
+            size,
             cid,
             mime_type,
-            width: if let Some(ref info) = img_info {
-                Some(info.width as i32)
-            } else {
-                None
-            },
+            width: img_info.as_ref().map(|info| info.width as i32),
             height: if let Some(info) = img_info {
                 Some(info.height as i32)
             } else {
@@ -173,11 +188,12 @@ impl BlobReader {
         })
     }
 
+    /// Track a blob that hasn't been associated with any records yet
     pub async fn track_untethered_blob(&self, metadata: BlobMetadata) -> Result<BlobRef> {
-        use crate::schema::pds::blob::dsl as BlobSchema;
+        use crate::schema::actor_store::blob::dsl as BlobSchema;
 
         let did = self.did.clone();
-        self.db.run(move |conn| {
+        self.db.get().await?.interact(move |conn| {
             let BlobMetadata {
                 temp_key,
                 size,
@@ -207,12 +223,13 @@ impl BlobReader {
         ON CONFLICT (cid, did) DO UPDATE \
         SET \"tempKey\" = EXCLUDED.\"tempKey\" \
             WHERE pds.blob.\"tempKey\" is not null;");
-            upsert
+            #[expect(trivial_casts)]
+            let _ = upsert
                 .bind::<Text, _>(&cid.to_string())
                 .bind::<Text, _>(&did)
                 .bind::<Text, _>(&mime_type)
                 .bind::<Integer, _>(size as i32)
-                .bind::<Nullable<Text>, _>(Some(temp_key.clone()))
+                .bind::<Nullable<Text>, _>(Some(temp_key))
                 .bind::<Nullable<Integer>, _>(width)
                 .bind::<Nullable<Integer>, _>(height)
                 .bind::<Text, _>(created_at)
@@ -220,136 +237,183 @@ impl BlobReader {
                 .execute(conn)?;
 
             Ok(BlobRef::new(cid, mime_type, size, None))
-        }).await
+        }).await.expect("Failed to track untethered blob")
     }
 
+    /// Process blobs associated with writes
     pub async fn process_write_blobs(&self, writes: Vec<PreparedWrite>) -> Result<()> {
         self.delete_dereferenced_blobs(writes.clone()).await?;
-        let _ = stream::iter(writes)
-            .then(|write| async move {
-                Ok::<(), anyhow::Error>(match write {
-                    PreparedWrite::Create(w) => {
-                        for blob in w.blobs {
-                            self.verify_blob_and_make_permanent(blob.clone()).await?;
-                            self.associate_blob(blob, w.uri.clone()).await?;
+
+        drop(
+            stream::iter(writes)
+                .then(async move |write| {
+                    match write {
+                        PreparedWrite::Create(w) => {
+                            for blob in w.blobs {
+                                self.verify_blob_and_make_permanent(blob.clone()).await?;
+                                self.associate_blob(blob, w.uri.clone()).await?;
+                            }
                         }
-                    }
-                    PreparedWrite::Update(w) => {
-                        for blob in w.blobs {
-                            self.verify_blob_and_make_permanent(blob.clone()).await?;
-                            self.associate_blob(blob, w.uri.clone()).await?;
+                        PreparedWrite::Update(w) => {
+                            for blob in w.blobs {
+                                self.verify_blob_and_make_permanent(blob.clone()).await?;
+                                self.associate_blob(blob, w.uri.clone()).await?;
+                            }
                         }
-                    }
-                    _ => (),
+                        _ => (),
+                    };
+                    Ok::<(), anyhow::Error>(())
                 })
-            })
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
+                .collect::<Vec<_>>()
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()?,
+        );
+
         Ok(())
     }
 
+    /// Delete blobs that are no longer referenced by any records
     pub async fn delete_dereferenced_blobs(&self, writes: Vec<PreparedWrite>) -> Result<()> {
-        use crate::schema::pds::blob::dsl as BlobSchema;
-        use crate::schema::pds::record_blob::dsl as RecordBlobSchema;
+        use crate::schema::actor_store::blob::dsl as BlobSchema;
+        use crate::schema::actor_store::record_blob::dsl as RecordBlobSchema;
 
+        // Extract URIs
         let uris: Vec<String> = writes
-            .clone()
-            .into_iter()
+            .iter()
             .filter_map(|w| match w {
-                PreparedWrite::Delete(w) => Some(w.uri),
-                PreparedWrite::Update(w) => Some(w.uri),
+                PreparedWrite::Delete(w) => Some(w.uri.clone()),
+                PreparedWrite::Update(w) => Some(w.uri.clone()),
                 _ => None,
             })
             .collect();
+
         if uris.is_empty() {
             return Ok(());
         }
 
+        // In SQLite, we can't do DELETE...RETURNING
+        // So we need to fetch the records first, then delete
+        let did = self.did.clone();
+        let uris_clone = uris.clone();
         let deleted_repo_blobs: Vec<models::RecordBlob> = self
             .db
-            .run(move |conn| {
-                delete(RecordBlobSchema::record_blob)
-                    .filter(RecordBlobSchema::recordUri.eq_any(uris))
-                    .get_results(conn)
-            })
+            .get()
             .await?
-            .into_iter()
-            .collect::<Vec<models::RecordBlob>>();
+            .interact(move |conn| {
+                RecordBlobSchema::record_blob
+                    .filter(RecordBlobSchema::recordUri.eq_any(&uris_clone))
+                    .filter(RecordBlobSchema::did.eq(&did))
+                    .load::<models::RecordBlob>(conn)
+            })
+            .await
+            .expect("Failed to get deleted repo blobs")?;
+
         if deleted_repo_blobs.is_empty() {
             return Ok(());
         }
 
+        // Now perform the delete
+        let uris_clone = uris.clone();
+        _ = self
+            .db
+            .get()
+            .await?
+            .interact(move |conn| {
+                delete(RecordBlobSchema::record_blob)
+                    .filter(RecordBlobSchema::recordUri.eq_any(uris_clone))
+                    .execute(conn)
+            })
+            .await
+            .expect("Failed to delete repo blobs")?;
+
+        // Extract blob cids from the deleted records
         let deleted_repo_blob_cids: Vec<String> = deleted_repo_blobs
             .into_iter()
             .map(|row| row.blob_cid)
-            .collect::<Vec<String>>();
-
-        let x = deleted_repo_blob_cids.clone();
-        let mut duplicated_cids: Vec<String> = self
-            .db
-            .run(move |conn| {
-                RecordBlobSchema::record_blob
-                    .select(RecordBlobSchema::blobCid)
-                    .filter(RecordBlobSchema::blobCid.eq_any(&x))
-                    .load(conn)
-            })
-            .await?
-            .into_iter()
-            .collect::<Vec<String>>();
-
-        let mut new_blob_cids: Vec<String> = writes
-            .into_iter()
-            .map(|w| match w {
-                PreparedWrite::Create(w) => w.blobs,
-                PreparedWrite::Update(w) => w.blobs,
-                PreparedWrite::Delete(_) => Vec::new(),
-            })
-            .collect::<Vec<Vec<PreparedBlobRef>>>()
-            .into_iter()
-            .flat_map(|v: Vec<PreparedBlobRef>| v.into_iter().map(|b| b.cid.to_string()))
             .collect();
-        let mut cids_to_keep = Vec::new();
-        cids_to_keep.append(&mut new_blob_cids);
-        cids_to_keep.append(&mut duplicated_cids);
 
-        let cids_to_delete = deleted_repo_blob_cids
-            .into_iter()
-            .filter_map(|cid: String| match cids_to_keep.contains(&cid) {
-                true => Some(cid),
-                false => None,
+        // Find duplicates (blobs referenced by other records)
+        let cids_clone = deleted_repo_blob_cids.clone();
+        let did_clone = self.did.clone();
+        let duplicated_cids: Vec<String> = self
+            .db
+            .get()
+            .await?
+            .interact(move |conn| {
+                RecordBlobSchema::record_blob
+                    .filter(RecordBlobSchema::blobCid.eq_any(cids_clone))
+                    .filter(RecordBlobSchema::did.eq(did_clone))
+                    .select(RecordBlobSchema::blobCid)
+                    .load::<String>(conn)
             })
-            .collect::<Vec<String>>();
+            .await
+            .expect("Failed to get duplicated cids")?;
+
+        // Extract new blob cids from writes (creates and updates)
+        let new_blob_cids: Vec<String> = writes
+            .iter()
+            .flat_map(|w| match w {
+                PreparedWrite::Create(w) => w.blobs.clone(),
+                PreparedWrite::Update(w) => w.blobs.clone(),
+                _ => Vec::new(),
+            })
+            .map(|b| b.cid.to_string())
+            .collect();
+
+        // Determine which blobs to keep vs delete
+        let cids_to_keep: Vec<String> = [&new_blob_cids[..], &duplicated_cids[..]].concat();
+        let cids_to_delete: Vec<String> = deleted_repo_blob_cids
+            .into_iter()
+            .filter(|cid| !cids_to_keep.contains(cid))
+            .collect();
+
         if cids_to_delete.is_empty() {
             return Ok(());
         }
 
-        let y = cids_to_delete.clone();
-        self.db
-            .run(move |conn| {
+        // Delete from the blob table
+        let cids = cids_to_delete.clone();
+        let did_clone = self.did.clone();
+        _ = self
+            .db
+            .get()
+            .await?
+            .interact(move |conn| {
                 delete(BlobSchema::blob)
-                    .filter(BlobSchema::cid.eq_any(&y))
+                    .filter(BlobSchema::cid.eq_any(cids))
+                    .filter(BlobSchema::did.eq(did_clone))
                     .execute(conn)
             })
-            .await?;
-
-        // Original code queues a background job to delete by CID from S3 compatible blobstore
-        let _ = stream::iter(cids_to_delete)
-            .then(|cid| async { self.blobstore.delete(cid).await })
-            .collect::<Vec<_>>()
             .await
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
+            .expect("Failed to delete blobs")?;
+
+        // Delete from blob storage
+        // Ideally we'd use a background queue here, but for now:
+        drop(
+            stream::iter(cids_to_delete)
+                .then(async move |cid| match Cid::from_str(&cid) {
+                    Ok(cid) => self.blobstore.delete(cid.to_string()).await,
+                    Err(e) => Err(anyhow::Error::new(e)),
+                })
+                .collect::<Vec<_>>()
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()?,
+        );
+
         Ok(())
     }
 
+    /// Verify a blob and make it permanent
     pub async fn verify_blob_and_make_permanent(&self, blob: PreparedBlobRef) -> Result<()> {
-        use crate::schema::pds::blob::dsl as BlobSchema;
+        use crate::schema::actor_store::blob::dsl as BlobSchema;
 
         let found = self
             .db
-            .run(move |conn| {
+            .get()
+            .await?
+            .interact(move |conn| {
                 BlobSchema::blob
                     .filter(
                         BlobSchema::cid
@@ -360,7 +424,9 @@ impl BlobReader {
                     .first(conn)
                     .optional()
             })
-            .await?;
+            .await
+            .expect("Failed to verify blob")?;
+
         if let Some(found) = found {
             verify_blob(&blob, &found).await?;
             if let Some(ref temp_key) = found.temp_key {
@@ -368,28 +434,36 @@ impl BlobReader {
                     .make_permanent(temp_key.clone(), blob.cid)
                     .await?;
             }
-            self.db
-                .run(move |conn| {
+            _ = self
+                .db
+                .get()
+                .await?
+                .interact(move |conn| {
                     update(BlobSchema::blob)
                         .filter(BlobSchema::tempKey.eq(found.temp_key))
                         .set(BlobSchema::tempKey.eq::<Option<String>>(None))
                         .execute(conn)
                 })
-                .await?;
+                .await
+                .expect("Failed to update blob")?;
             Ok(())
         } else {
-            bail!("Cound not find blob: {:?}", blob.cid.to_string())
+            bail!("Could not find blob: {:?}", blob.cid.to_string())
         }
     }
 
-    pub async fn associate_blob(&self, blob: PreparedBlobRef, _record_uri: String) -> Result<()> {
-        use crate::schema::pds::record_blob::dsl as RecordBlobSchema;
+    /// Associate a blob with a record
+    pub async fn associate_blob(&self, blob: PreparedBlobRef, record_uri: String) -> Result<()> {
+        use crate::schema::actor_store::record_blob::dsl as RecordBlobSchema;
 
         let cid = blob.cid.to_string();
-        let record_uri = _record_uri;
         let did = self.did.clone();
-        self.db
-            .run(move |conn| {
+
+        _ = self
+            .db
+            .get()
+            .await?
+            .interact(move |conn| {
                 insert_into(RecordBlobSchema::record_blob)
                     .values((
                         RecordBlobSchema::blobCid.eq(cid),
@@ -399,16 +473,21 @@ impl BlobReader {
                     .on_conflict_do_nothing()
                     .execute(conn)
             })
-            .await?;
+            .await
+            .expect("Failed to associate blob")?;
+
         Ok(())
     }
 
+    /// Count all blobs for this actor
     pub async fn blob_count(&self) -> Result<i64> {
-        use crate::schema::pds::blob::dsl as BlobSchema;
+        use crate::schema::actor_store::blob::dsl as BlobSchema;
 
         let did = self.did.clone();
         self.db
-            .run(move |conn| {
+            .get()
+            .await?
+            .interact(move |conn| {
                 let res = BlobSchema::blob
                     .filter(BlobSchema::did.eq(&did))
                     .count()
@@ -416,14 +495,18 @@ impl BlobReader {
                 Ok(res)
             })
             .await
+            .expect("Failed to count blobs")
     }
 
+    /// Count blobs associated with records
     pub async fn record_blob_count(&self) -> Result<i64> {
-        use crate::schema::pds::record_blob::dsl as RecordBlobSchema;
+        use crate::schema::actor_store::record_blob::dsl as RecordBlobSchema;
 
         let did = self.did.clone();
         self.db
-            .run(move |conn| {
+            .get()
+            .await?
+            .interact(move |conn| {
                 let res: i64 = RecordBlobSchema::record_blob
                     .filter(RecordBlobSchema::did.eq(&did))
                     .select(count_distinct(RecordBlobSchema::blobCid))
@@ -431,69 +514,79 @@ impl BlobReader {
                 Ok(res)
             })
             .await
+            .expect("Failed to count record blobs")
     }
 
+    /// List blobs that are referenced but missing
     pub async fn list_missing_blobs(
         &self,
         opts: ListMissingBlobsOpts,
     ) -> Result<Vec<ListMissingBlobsRefRecordBlob>> {
-        use crate::schema::pds::blob::dsl as BlobSchema;
-        use crate::schema::pds::record_blob::dsl as RecordBlobSchema;
+        use crate::schema::actor_store::blob::dsl as BlobSchema;
+        use crate::schema::actor_store::record_blob::dsl as RecordBlobSchema;
 
         let did = self.did.clone();
         self.db
-            .run(move |conn| {
+            .get()
+            .await?
+            .interact(move |conn| {
                 let ListMissingBlobsOpts { cursor, limit } = opts;
 
                 if limit > 1000 {
                     bail!("Limit too high. Max: 1000.");
                 }
 
-                let res: Vec<models::RecordBlob> = if let Some(cursor) = cursor {
-                    RecordBlobSchema::record_blob
-                        .limit(limit as i64)
-                        .filter(not(exists(
-                            BlobSchema::blob
-                                .filter(BlobSchema::cid.eq(RecordBlobSchema::blobCid))
-                                .filter(BlobSchema::did.eq(&did))
-                                .select(models::Blob::as_select()),
-                        )))
-                        .filter(RecordBlobSchema::blobCid.gt(cursor))
-                        .filter(RecordBlobSchema::did.eq(&did))
-                        .select(models::RecordBlob::as_select())
-                        .order(RecordBlobSchema::blobCid.asc())
-                        .distinct_on(RecordBlobSchema::blobCid)
-                        .get_results(conn)?
+                // TODO: Improve this query
+
+                // SQLite doesn't support DISTINCT ON, so we use GROUP BY instead
+                let query = RecordBlobSchema::record_blob
+                    .filter(not(exists(
+                        BlobSchema::blob
+                            .filter(BlobSchema::cid.eq(RecordBlobSchema::blobCid))
+                            .filter(BlobSchema::did.eq(&did)),
+                    )))
+                    .filter(RecordBlobSchema::did.eq(&did))
+                    .into_boxed();
+
+                // Apply cursor filtering if provided
+                let query = if let Some(cursor) = cursor {
+                    query.filter(RecordBlobSchema::blobCid.gt(cursor))
                 } else {
-                    RecordBlobSchema::record_blob
-                        .limit(limit as i64)
-                        .filter(not(exists(
-                            BlobSchema::blob
-                                .filter(BlobSchema::cid.eq(RecordBlobSchema::blobCid))
-                                .filter(BlobSchema::did.eq(&did))
-                                .select(models::Blob::as_select()),
-                        )))
-                        .filter(RecordBlobSchema::did.eq(&did))
-                        .select(models::RecordBlob::as_select())
-                        .order(RecordBlobSchema::blobCid.asc())
-                        .distinct_on(RecordBlobSchema::blobCid)
-                        .get_results(conn)?
+                    query
                 };
 
-                Ok(res
-                    .into_iter()
-                    .map(|row| ListMissingBlobsRefRecordBlob {
-                        cid: row.blob_cid,
-                        record_uri: row.record_uri,
-                    })
-                    .collect())
+                // For SQLite, use a simplified approach without GROUP BY to avoid recursion limit issues
+                let res = query
+                    .select((RecordBlobSchema::blobCid, RecordBlobSchema::recordUri))
+                    .order(RecordBlobSchema::blobCid.asc())
+                    .limit(limit as i64)
+                    .load::<(String, String)>(conn)?;
+
+                // Process results to get distinct cids with their first record URI
+                let mut result = Vec::new();
+                let mut last_cid = None;
+
+                for (cid, uri) in res {
+                    if last_cid.as_ref() != Some(&cid) {
+                        result.push(ListMissingBlobsRefRecordBlob {
+                            cid: cid.clone(),
+                            record_uri: uri,
+                        });
+                        last_cid = Some(cid);
+                    }
+                }
+
+                Ok(result)
             })
             .await
+            .expect("Failed to list missing blobs")
     }
 
+    /// List all blobs with optional filtering
     pub async fn list_blobs(&self, opts: ListBlobsOpts) -> Result<Vec<String>> {
-        use crate::schema::pds::record::dsl as RecordSchema;
-        use crate::schema::pds::record_blob::dsl as RecordBlobSchema;
+        use crate::schema::actor_store::record::dsl as RecordSchema;
+        use crate::schema::actor_store::record_blob::dsl as RecordBlobSchema;
+
         let ListBlobsOpts {
             since,
             cursor,
@@ -515,7 +608,12 @@ impl BlobReader {
             if let Some(cursor) = cursor {
                 builder = builder.filter(RecordBlobSchema::blobCid.gt(cursor));
             }
-            self.db.run(move |conn| builder.load(conn)).await?
+            self.db
+                .get()
+                .await?
+                .interact(move |conn| builder.load(conn))
+                .await
+                .expect("Failed to list blobs")?
         } else {
             let mut builder = RecordBlobSchema::record_blob
                 .select(RecordBlobSchema::blobCid)
@@ -527,67 +625,85 @@ impl BlobReader {
             if let Some(cursor) = cursor {
                 builder = builder.filter(RecordBlobSchema::blobCid.gt(cursor));
             }
-            self.db.run(move |conn| builder.load(conn)).await?
+            self.db
+                .get()
+                .await?
+                .interact(move |conn| builder.load(conn))
+                .await
+                .expect("Failed to list blobs")?
         };
+
         Ok(res)
     }
 
+    /// Get the takedown status of a blob
     pub async fn get_blob_takedown_status(&self, cid: Cid) -> Result<Option<StatusAttr>> {
-        use crate::schema::pds::blob::dsl as BlobSchema;
+        use crate::schema::actor_store::blob::dsl as BlobSchema;
 
         self.db
-            .run(move |conn| {
+            .get()
+            .await?
+            .interact(move |conn| {
                 let res = BlobSchema::blob
                     .filter(BlobSchema::cid.eq(cid.to_string()))
                     .select(models::Blob::as_select())
                     .first(conn)
                     .optional()?;
+
                 match res {
                     None => Ok(None),
-                    Some(res) => match res.takedown_ref {
-                        None => Ok(Some(StatusAttr {
-                            applied: false,
-                            r#ref: None,
-                        })),
-                        Some(takedown_ref) => Ok(Some(StatusAttr {
-                            applied: true,
-                            r#ref: Some(takedown_ref),
-                        })),
-                    },
+                    Some(res) => res.takedown_ref.map_or_else(
+                        || {
+                            Ok(Some(StatusAttr {
+                                applied: false,
+                                r#ref: None,
+                            }))
+                        },
+                        |takedown_ref| {
+                            Ok(Some(StatusAttr {
+                                applied: true,
+                                r#ref: Some(takedown_ref),
+                            }))
+                        },
+                    ),
                 }
             })
             .await
+            .expect("Failed to get blob takedown status")
     }
 
-    // Transactors
-    // -------------------
-
+    /// Update the takedown status of a blob
     pub async fn update_blob_takedown_status(&self, blob: Cid, takedown: StatusAttr) -> Result<()> {
-        use crate::schema::pds::blob::dsl as BlobSchema;
+        use crate::schema::actor_store::blob::dsl as BlobSchema;
 
         let takedown_ref: Option<String> = match takedown.applied {
-            true => match takedown.r#ref {
-                Some(takedown_ref) => Some(takedown_ref),
-                None => Some(now()),
-            },
+            true => takedown.r#ref.map_or_else(|| Some(now()), Some),
             false => None,
         };
 
-        let blob = self
+        let blob_cid = blob.to_string();
+        let did_clone = self.did.clone();
+
+        _ = self
             .db
-            .run(move |conn| {
-                update(BlobSchema::blob)
-                    .filter(BlobSchema::cid.eq(blob.to_string()))
+            .get()
+            .await?
+            .interact(move |conn| {
+                _ = update(BlobSchema::blob)
+                    .filter(BlobSchema::cid.eq(blob_cid))
+                    .filter(BlobSchema::did.eq(did_clone))
                     .set(BlobSchema::takedownRef.eq(takedown_ref))
                     .execute(conn)?;
-                Ok::<_, Error>(blob)
+                Ok::<_, result::Error>(blob)
             })
-            .await?;
+            .await
+            .expect("Failed to update blob takedown status")?;
 
         let res = match takedown.applied {
             true => self.blobstore.quarantine(blob).await,
             false => self.blobstore.unquarantine(blob).await,
         };
+
         match res {
             Ok(_) => Ok(()),
             Err(e) => match e.downcast_ref() {
@@ -599,7 +715,7 @@ impl BlobReader {
 }
 
 pub async fn accepted_mime(mime: String, accepted: Vec<String>) -> bool {
-    if accepted.contains("*/*".to_owned()) {
+    if accepted.contains(&"*/*".to_owned()) {
         return true;
     }
     let globs: Vec<String> = accepted
@@ -615,7 +731,7 @@ pub async fn accepted_mime(mime: String, accepted: Vec<String>) -> bool {
             }
         }
     }
-    accepted.contains(mime)
+    accepted.contains(&mime)
 }
 
 pub async fn verify_blob(blob: &PreparedBlobRef, found: &models::Blob) -> Result<()> {
@@ -629,7 +745,11 @@ pub async fn verify_blob(blob: &PreparedBlobRef, found: &models::Blob) -> Result
         }
     }
     if blob.mime_type != found.mime_type {
-        bail!("InvalidMimeType: Referenced MimeTy[e does not match stored blob. Expected: {:?}, Got: {:?}",found.mime_type, blob.mime_type)
+        bail!(
+            "InvalidMimeType: Referenced MimeType does not match stored blob. Expected: {:?}, Got: {:?}",
+            found.mime_type,
+            blob.mime_type
+        )
     }
     if let Some(ref accept) = blob.constraints.accept {
         if !accepted_mime(blob.mime_type.clone(), accept.clone()).await {

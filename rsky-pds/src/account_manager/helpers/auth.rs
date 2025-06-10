@@ -1,5 +1,4 @@
 use crate::auth_verifier::AuthScope;
-use crate::db::DbConn;
 use crate::models;
 use anyhow::Result;
 use diesel::*;
@@ -217,127 +216,188 @@ pub fn decode_refresh_token(jwt: String, jwt_key: Keypair) -> Result<RefreshToke
 pub async fn store_refresh_token(
     payload: RefreshToken,
     app_password_name: Option<String>,
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
 ) -> Result<()> {
     use crate::schema::pds::refresh_token::dsl as RefreshTokenSchema;
 
     let exp = from_micros_to_utc((payload.exp.as_millis() / 1000) as i64);
 
-    db.run(move |conn| {
-        insert_into(RefreshTokenSchema::refresh_token)
-            .values((
-                RefreshTokenSchema::id.eq(payload.jti),
-                RefreshTokenSchema::did.eq(payload.sub),
-                RefreshTokenSchema::appPasswordName.eq(app_password_name),
-                RefreshTokenSchema::expiresAt.eq(format!("{}", exp.format(RFC3339_VARIANT))),
-            ))
-            .on_conflict_do_nothing() // E.g. when re-granting during a refresh grace period
-            .execute(conn)
-    })
-    .await?;
+    _ = db
+        .get()
+        .await?
+        .interact(move |conn| {
+            insert_into(RefreshTokenSchema::refresh_token)
+                .values((
+                    RefreshTokenSchema::id.eq(payload.jti),
+                    RefreshTokenSchema::did.eq(payload.sub),
+                    RefreshTokenSchema::appPasswordName.eq(app_password_name),
+                    RefreshTokenSchema::expiresAt.eq(format!("{}", exp.format(RFC3339_VARIANT))),
+                ))
+                .on_conflict_do_nothing() // E.g. when re-granting during a refresh grace period
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to store refresh token")?;
 
     Ok(())
 }
 
-pub async fn revoke_refresh_token(id: String, db: &DbConn) -> Result<bool> {
+pub async fn revoke_refresh_token(
+    id: String,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<bool> {
     use crate::schema::pds::refresh_token::dsl as RefreshTokenSchema;
-    db.run(move |conn| {
-        let deleted_rows = delete(RefreshTokenSchema::refresh_token)
-            .filter(RefreshTokenSchema::id.eq(id))
-            .get_results::<models::RefreshToken>(conn)?;
+    db.get()
+        .await?
+        .interact(move |conn| {
+            let deleted_rows = delete(RefreshTokenSchema::refresh_token)
+                .filter(RefreshTokenSchema::id.eq(id))
+                .get_results::<models::RefreshToken>(conn)?;
 
-        Ok(!deleted_rows.is_empty())
-    })
-    .await
+            Ok(!deleted_rows.is_empty())
+        })
+        .await
+        .expect("Failed to revoke refresh token")
 }
 
-pub async fn revoke_refresh_tokens_by_did(did: &str, db: &DbConn) -> Result<bool> {
+pub async fn revoke_refresh_tokens_by_did(
+    did: &str,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<bool> {
     use crate::schema::pds::refresh_token::dsl as RefreshTokenSchema;
     let did = did.to_owned();
-    db.run(move |conn| {
-        let deleted_rows = delete(RefreshTokenSchema::refresh_token)
-            .filter(RefreshTokenSchema::did.eq(did))
-            .get_results::<models::RefreshToken>(conn)?;
+    db.get()
+        .await?
+        .interact(move |conn| {
+            let deleted_rows = delete(RefreshTokenSchema::refresh_token)
+                .filter(RefreshTokenSchema::did.eq(did))
+                .get_results::<models::RefreshToken>(conn)?;
 
-        Ok(!deleted_rows.is_empty())
-    })
-    .await
+            Ok(!deleted_rows.is_empty())
+        })
+        .await
+        .expect("Failed to revoke refresh tokens by DID")
 }
 
 pub async fn revoke_app_password_refresh_token(
     did: &str,
     app_pass_name: &str,
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
 ) -> Result<bool> {
     use crate::schema::pds::refresh_token::dsl as RefreshTokenSchema;
 
     let did = did.to_owned();
     let app_pass_name = app_pass_name.to_owned();
-    db.run(move |conn| {
-        let deleted_rows = delete(RefreshTokenSchema::refresh_token)
-            .filter(RefreshTokenSchema::did.eq(did))
-            .filter(RefreshTokenSchema::appPasswordName.eq(app_pass_name))
-            .get_results::<models::RefreshToken>(conn)?;
+    db.get()
+        .await?
+        .interact(move |conn| {
+            let deleted_rows = delete(RefreshTokenSchema::refresh_token)
+                .filter(RefreshTokenSchema::did.eq(did))
+                .filter(RefreshTokenSchema::appPasswordName.eq(app_pass_name))
+                .get_results::<models::RefreshToken>(conn)?;
 
-        Ok(!deleted_rows.is_empty())
-    })
-    .await
+            Ok(!deleted_rows.is_empty())
+        })
+        .await
+        .expect("Failed to revoke app password refresh token")
 }
 
-pub async fn get_refresh_token(id: &str, db: &DbConn) -> Result<Option<models::RefreshToken>> {
+pub async fn get_refresh_token(
+    id: &str,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<Option<models::RefreshToken>> {
     use crate::schema::pds::refresh_token::dsl as RefreshTokenSchema;
     let id = id.to_owned();
-    db.run(move |conn| {
-        Ok(RefreshTokenSchema::refresh_token
-            .find(id)
-            .first(conn)
-            .optional()?)
-    })
-    .await
+    db.get()
+        .await?
+        .interact(move |conn| {
+            Ok(RefreshTokenSchema::refresh_token
+                .find(id)
+                .first(conn)
+                .optional()?)
+        })
+        .await
+        .expect("Failed to get refresh token")
 }
 
-pub async fn delete_expired_refresh_tokens(did: &str, now: String, db: &DbConn) -> Result<()> {
+pub async fn delete_expired_refresh_tokens(
+    did: &str,
+    now: String,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<()> {
     use crate::schema::pds::refresh_token::dsl as RefreshTokenSchema;
     let did = did.to_owned();
 
-    db.run(move |conn| {
-        delete(RefreshTokenSchema::refresh_token)
-            .filter(RefreshTokenSchema::did.eq(did))
-            .filter(RefreshTokenSchema::expiresAt.le(now))
-            .execute(conn)?;
-        Ok(())
-    })
-    .await
+    db.get()
+        .await?
+        .interact(move |conn| {
+            _ = delete(RefreshTokenSchema::refresh_token)
+                .filter(RefreshTokenSchema::did.eq(did))
+                .filter(RefreshTokenSchema::expiresAt.le(now))
+                .execute(conn)?;
+            Ok(())
+        })
+        .await
+        .expect("Failed to delete expired refresh tokens")
 }
 
-pub async fn add_refresh_grace_period(opts: RefreshGracePeriodOpts, db: &DbConn) -> Result<()> {
-    db.run(move |conn| {
-        let RefreshGracePeriodOpts {
-            id,
-            expires_at,
-            next_id,
-        } = opts;
-        use crate::schema::pds::refresh_token::dsl as RefreshTokenSchema;
+pub async fn add_refresh_grace_period(
+    opts: RefreshGracePeriodOpts,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<()> {
+    db.get()
+        .await?
+        .interact(move |conn| {
+            let RefreshGracePeriodOpts {
+                id,
+                expires_at,
+                next_id,
+            } = opts;
+            use crate::schema::pds::refresh_token::dsl as RefreshTokenSchema;
 
-        update(RefreshTokenSchema::refresh_token)
-            .filter(RefreshTokenSchema::id.eq(id))
-            .filter(
-                RefreshTokenSchema::nextId
-                    .is_null()
-                    .or(RefreshTokenSchema::nextId.eq(&next_id)),
-            )
-            .set((
-                RefreshTokenSchema::expiresAt.eq(expires_at),
-                RefreshTokenSchema::nextId.eq(&next_id),
-            ))
-            .returning(models::RefreshToken::as_select())
-            .get_results(conn)
-            .map_err(|error| {
-                anyhow::Error::new(AuthHelperError::ConcurrentRefresh).context(error)
-            })?;
-        Ok(())
-    })
-    .await
+            drop(
+                update(RefreshTokenSchema::refresh_token)
+                    .filter(RefreshTokenSchema::id.eq(id))
+                    .filter(
+                        RefreshTokenSchema::nextId
+                            .is_null()
+                            .or(RefreshTokenSchema::nextId.eq(&next_id)),
+                    )
+                    .set((
+                        RefreshTokenSchema::expiresAt.eq(expires_at),
+                        RefreshTokenSchema::nextId.eq(&next_id),
+                    ))
+                    .returning(models::RefreshToken::as_select())
+                    .get_results(conn)
+                    .map_err(|error| {
+                        anyhow::Error::new(AuthHelperError::ConcurrentRefresh).context(error)
+                    })?,
+            );
+            Ok(())
+        })
+        .await
+        .expect("Failed to add refresh grace period")
 }
 
 pub fn get_refresh_token_id() -> String {

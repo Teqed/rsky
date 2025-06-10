@@ -1,6 +1,4 @@
-use crate::db::DbConn;
-use crate::models;
-use crate::models::RepoBlock;
+use crate::models::models::actor_store::{RepoBlock, RepoRoot};
 use anyhow::Result;
 use diesel::dsl::sql;
 use diesel::prelude::*;
@@ -23,37 +21,46 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-#[derive(Clone, Debug)]
 pub struct SqlRepoReader {
     pub cache: Arc<RwLock<BlockMap>>,
-    pub db: Arc<DbConn>,
+    pub db: deadpool_diesel::sqlite::Object,
     pub root: Option<Cid>,
     pub rev: Option<String>,
     pub now: String,
     pub did: String,
 }
 
+impl std::fmt::Debug for SqlRepoReader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SqlRepoReader")
+            .field("did", &self.did)
+            .field("root", &self.root)
+            .field("rev", &self.rev)
+            .finish()
+    }
+}
+
 impl ReadableBlockstore for SqlRepoReader {
-    fn get_bytes<'a>(
-        &'a self,
-        cid: &'a Cid,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<Vec<u8>>>> + Send + Sync + 'a>> {
+    fn get_bytes<'life>(
+        &'life self,
+        cid: &'life Cid,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<Vec<u8>>>> + Send + Sync + 'life>> {
         let did: String = self.did.clone();
-        let db: Arc<DbConn> = self.db.clone();
-        let cid = cid.clone();
+        let cid = *cid;
 
         Box::pin(async move {
-            use crate::schema::pds::repo_block::dsl as RepoBlockSchema;
+            use crate::schema::actor_store::repo_block::dsl as RepoBlockSchema;
             let cached = {
                 let cache_guard = self.cache.read().await;
-                cache_guard.get(cid).map(|v| v.clone())
+                cache_guard.get(cid).cloned()
             };
             if let Some(cached_result) = cached {
-                return Ok(Some(cached_result.clone()));
+                return Ok(Some(cached_result));
             }
 
-            let found: Option<Vec<u8>> = db
-                .run(move |conn| {
+            let found: Option<Vec<u8>> = self
+                .db
+                .interact(move |conn| {
                     RepoBlockSchema::repo_block
                         .filter(RepoBlockSchema::cid.eq(cid.to_string()))
                         .filter(RepoBlockSchema::did.eq(did))
@@ -61,7 +68,8 @@ impl ReadableBlockstore for SqlRepoReader {
                         .first(conn)
                         .optional()
                 })
-                .await?;
+                .await
+                .expect("Failed to get block")?;
             match found {
                 None => Ok(None),
                 Some(result) => {
@@ -75,25 +83,24 @@ impl ReadableBlockstore for SqlRepoReader {
         })
     }
 
-    fn has<'a>(
-        &'a self,
+    fn has<'life>(
+        &'life self,
         cid: Cid,
-    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send + Sync + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<bool>> + Send + Sync + 'life>> {
         Box::pin(async move {
             let got = <Self as ReadableBlockstore>::get_bytes(self, &cid).await?;
             Ok(got.is_some())
         })
     }
 
-    fn get_blocks<'a>(
-        &'a self,
+    fn get_blocks<'life>(
+        &'life self,
         cids: Vec<Cid>,
-    ) -> Pin<Box<dyn Future<Output = Result<BlocksAndMissing>> + Send + Sync + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<BlocksAndMissing>> + Send + Sync + 'life>> {
         let did: String = self.did.clone();
-        let db: Arc<DbConn> = self.db.clone();
 
         Box::pin(async move {
-            use crate::schema::pds::repo_block::dsl as RepoBlockSchema;
+            use crate::schema::actor_store::repo_block::dsl as RepoBlockSchema;
             let cached = {
                 let mut cache_guard = self.cache.write().await;
                 cache_guard.get_many(cids)?
@@ -109,9 +116,8 @@ impl ReadableBlockstore for SqlRepoReader {
             let blocks = Arc::new(tokio::sync::Mutex::new(BlockMap::new()));
             let missing_set = Arc::new(tokio::sync::Mutex::new(missing));
 
-            let _: Vec<_> = stream::iter(missing_strings.chunks(500))
+            let stream: Vec<_> = stream::iter(missing_strings.chunks(500))
                 .then(|batch| {
-                    let this_db = db.clone();
                     let this_did = did.clone();
                     let blocks = Arc::clone(&blocks);
                     let missing = Arc::clone(&missing_set);
@@ -119,15 +125,17 @@ impl ReadableBlockstore for SqlRepoReader {
 
                     async move {
                         // Database query
-                        let rows: Vec<(String, Vec<u8>)> = this_db
-                            .run(move |conn| {
+                        let rows: Vec<(String, Vec<u8>)> = self
+                            .db
+                            .interact(move |conn| {
                                 RepoBlockSchema::repo_block
                                     .filter(RepoBlockSchema::cid.eq_any(batch))
                                     .filter(RepoBlockSchema::did.eq(this_did))
                                     .select((RepoBlockSchema::cid, RepoBlockSchema::content))
                                     .load(conn)
                             })
-                            .await?;
+                            .await
+                            .expect("Failed to get blocks")?;
 
                         // Process rows with locked access
                         let mut blocks = blocks.lock().await;
@@ -144,6 +152,7 @@ impl ReadableBlockstore for SqlRepoReader {
                 })
                 .try_collect()
                 .await?;
+            drop(stream);
 
             // Extract values from synchronization primitives
             let mut blocks = Arc::try_unwrap(blocks)
@@ -169,7 +178,9 @@ impl ReadableBlockstore for SqlRepoReader {
 }
 
 impl RepoStorage for SqlRepoReader {
-    fn get_root<'a>(&'a self) -> Pin<Box<dyn Future<Output = Option<Cid>> + Send + Sync + 'a>> {
+    fn get_root<'life>(
+        &'life self,
+    ) -> Pin<Box<dyn Future<Output = Option<Cid>> + Send + Sync + 'life>> {
         Box::pin(async move {
             match self.get_root_detailed().await {
                 Ok(root) => Some(root.cid),
@@ -178,30 +189,32 @@ impl RepoStorage for SqlRepoReader {
         })
     }
 
-    fn put_block<'a>(
-        &'a self,
+    fn put_block<'life>(
+        &'life self,
         cid: Cid,
         bytes: Vec<u8>,
         rev: String,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + Sync + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + Sync + 'life>> {
         let did: String = self.did.clone();
-        let db: Arc<DbConn> = self.db.clone();
         let bytes_cloned = bytes.clone();
         Box::pin(async move {
-            use crate::schema::pds::repo_block::dsl as RepoBlockSchema;
+            use crate::schema::actor_store::repo_block::dsl as RepoBlockSchema;
 
-            db.run(move |conn| {
-                insert_into(RepoBlockSchema::repo_block)
-                    .values((
-                        RepoBlockSchema::did.eq(did),
-                        RepoBlockSchema::cid.eq(cid.to_string()),
-                        RepoBlockSchema::repoRev.eq(rev),
-                        RepoBlockSchema::size.eq(bytes.len() as i32),
-                        RepoBlockSchema::content.eq(bytes),
-                    ))
-                    .execute(conn)
-            })
-            .await?;
+            _ = self
+                .db
+                .interact(move |conn| {
+                    insert_into(RepoBlockSchema::repo_block)
+                        .values((
+                            RepoBlockSchema::did.eq(did),
+                            RepoBlockSchema::cid.eq(cid.to_string()),
+                            RepoBlockSchema::repoRev.eq(rev),
+                            RepoBlockSchema::size.eq(bytes.len() as i32),
+                            RepoBlockSchema::content.eq(bytes),
+                        ))
+                        .execute(conn)
+                })
+                .await
+                .expect("Failed to put block")?;
             {
                 let mut cache_guard = self.cache.write().await;
                 cache_guard.set(cid, bytes_cloned);
@@ -210,16 +223,15 @@ impl RepoStorage for SqlRepoReader {
         })
     }
 
-    fn put_many<'a>(
-        &'a self,
+    fn put_many<'life>(
+        &'life self,
         to_put: BlockMap,
         rev: String,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + Sync + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + Sync + 'life>> {
         let did: String = self.did.clone();
-        let db: Arc<DbConn> = self.db.clone();
 
         Box::pin(async move {
-            use crate::schema::pds::repo_block::dsl as RepoBlockSchema;
+            use crate::schema::actor_store::repo_block::dsl as RepoBlockSchema;
 
             let blocks: Vec<RepoBlock> = to_put
                 .map
@@ -236,77 +248,74 @@ impl RepoStorage for SqlRepoReader {
             let chunks: Vec<Vec<RepoBlock>> =
                 blocks.chunks(50).map(|chunk| chunk.to_vec()).collect();
 
-            let _: Vec<_> = stream::iter(chunks)
-                .then(|batch| {
-                    let db = db.clone();
-                    async move {
-                        db.run(move |conn| {
-                            insert_into(RepoBlockSchema::repo_block)
-                                .values(batch)
-                                .on_conflict_do_nothing()
-                                .execute(conn)
-                                .map(|_| ())
-                        })
-                        .await
-                        .map_err(anyhow::Error::from)
-                    }
-                })
-                .collect::<Vec<_>>()
-                .await
-                .into_iter()
-                .collect::<Result<Vec<()>>>()?;
+            for batch in chunks {
+                _ = self
+                    .db
+                    .interact(move |conn| {
+                        insert_or_ignore_into(RepoBlockSchema::repo_block)
+                            .values(&batch)
+                            .execute(conn)
+                    })
+                    .await
+                    .expect("Failed to insert blocks")?;
+            }
 
             Ok(())
         })
     }
-    fn update_root<'a>(
-        &'a self,
+    fn update_root<'life>(
+        &'life self,
         cid: Cid,
         rev: String,
         is_create: Option<bool>,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + Sync + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + Sync + 'life>> {
         let did: String = self.did.clone();
-        let db: Arc<DbConn> = self.db.clone();
         let now: String = self.now.clone();
 
         Box::pin(async move {
-            use crate::schema::pds::repo_root::dsl as RepoRootSchema;
+            use crate::schema::actor_store::repo_root::dsl as RepoRootSchema;
 
             let is_create = is_create.unwrap_or(false);
             if is_create {
-                db.run(move |conn| {
-                    insert_into(RepoRootSchema::repo_root)
-                        .values((
-                            RepoRootSchema::did.eq(did),
-                            RepoRootSchema::cid.eq(cid.to_string()),
-                            RepoRootSchema::rev.eq(rev),
-                            RepoRootSchema::indexedAt.eq(now),
-                        ))
-                        .execute(conn)
-                })
-                .await?;
+                _ = self
+                    .db
+                    .interact(move |conn| {
+                        insert_into(RepoRootSchema::repo_root)
+                            .values((
+                                RepoRootSchema::did.eq(did),
+                                RepoRootSchema::cid.eq(cid.to_string()),
+                                RepoRootSchema::rev.eq(rev),
+                                RepoRootSchema::indexedAt.eq(now),
+                            ))
+                            .execute(conn)
+                    })
+                    .await
+                    .expect("Failed to create root")?;
             } else {
-                db.run(move |conn| {
-                    update(RepoRootSchema::repo_root)
-                        .filter(RepoRootSchema::did.eq(did))
-                        .set((
-                            RepoRootSchema::cid.eq(cid.to_string()),
-                            RepoRootSchema::rev.eq(rev),
-                            RepoRootSchema::indexedAt.eq(now),
-                        ))
-                        .execute(conn)
-                })
-                .await?;
+                _ = self
+                    .db
+                    .interact(move |conn| {
+                        update(RepoRootSchema::repo_root)
+                            .filter(RepoRootSchema::did.eq(did))
+                            .set((
+                                RepoRootSchema::cid.eq(cid.to_string()),
+                                RepoRootSchema::rev.eq(rev),
+                                RepoRootSchema::indexedAt.eq(now),
+                            ))
+                            .execute(conn)
+                    })
+                    .await
+                    .expect("Failed to update root")?;
             }
             Ok(())
         })
     }
 
-    fn apply_commit<'a>(
-        &'a self,
+    fn apply_commit<'life>(
+        &'life self,
         commit: CommitData,
         is_create: Option<bool>,
-    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + Sync + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + Sync + 'life>> {
         Box::pin(async move {
             self.update_root(commit.cid, commit.rev.clone(), is_create)
                 .await?;
@@ -319,9 +328,9 @@ impl RepoStorage for SqlRepoReader {
 
 // Basically handles getting ipld blocks from db
 impl SqlRepoReader {
-    pub fn new(did: String, now: Option<String>, db: Arc<DbConn>) -> Self {
+    pub fn new(did: String, now: Option<String>, db: deadpool_diesel::sqlite::Object) -> Self {
         let now = now.unwrap_or_else(rsky_common::now);
-        SqlRepoReader {
+        Self {
             cache: Arc::new(RwLock::new(BlockMap::new())),
             root: None,
             rev: None,
@@ -366,13 +375,13 @@ impl SqlRepoReader {
         cursor: &Option<CidAndRev>,
     ) -> Result<Vec<RepoBlock>> {
         let did: String = self.did.clone();
-        let db: Arc<DbConn> = self.db.clone();
         let since = since.clone();
         let cursor = cursor.clone();
-        use crate::schema::pds::repo_block::dsl as RepoBlockSchema;
+        use crate::schema::actor_store::repo_block::dsl as RepoBlockSchema;
 
-        Ok(db
-            .run(move |conn| {
+        Ok(self
+            .db
+            .interact(move |conn| {
                 let mut builder = RepoBlockSchema::repo_block
                     .select(RepoBlock::as_select())
                     .order((RepoBlockSchema::repoRev.desc(), RepoBlockSchema::cid.desc()))
@@ -399,22 +408,24 @@ impl SqlRepoReader {
                 }
                 builder.load(conn)
             })
-            .await?)
+            .await
+            .expect("Failed to get block range")?)
     }
 
     pub async fn count_blocks(&self) -> Result<i64> {
         let did: String = self.did.clone();
-        let db: Arc<DbConn> = self.db.clone();
-        use crate::schema::pds::repo_block::dsl as RepoBlockSchema;
+        use crate::schema::actor_store::repo_block::dsl as RepoBlockSchema;
 
-        let res = db
-            .run(move |conn| {
+        let res = self
+            .db
+            .interact(move |conn| {
                 RepoBlockSchema::repo_block
                     .filter(RepoBlockSchema::did.eq(did))
                     .count()
                     .get_result(conn)
             })
-            .await?;
+            .await
+            .expect("Failed to count blocks")?;
         Ok(res)
     }
 
@@ -424,11 +435,11 @@ impl SqlRepoReader {
     /// Proactively cache all blocks from a particular commit (to prevent multiple roundtrips)
     pub async fn cache_rev(&mut self, rev: String) -> Result<()> {
         let did: String = self.did.clone();
-        let db: Arc<DbConn> = self.db.clone();
-        use crate::schema::pds::repo_block::dsl as RepoBlockSchema;
+        use crate::schema::actor_store::repo_block::dsl as RepoBlockSchema;
 
-        let res: Vec<(String, Vec<u8>)> = db
-            .run(move |conn| {
+        let result: Vec<(String, Vec<u8>)> = self
+            .db
+            .interact(move |conn| {
                 RepoBlockSchema::repo_block
                     .filter(RepoBlockSchema::did.eq(did))
                     .filter(RepoBlockSchema::repoRev.eq(rev))
@@ -436,8 +447,9 @@ impl SqlRepoReader {
                     .limit(15)
                     .get_results::<(String, Vec<u8>)>(conn)
             })
-            .await?;
-        for row in res {
+            .await
+            .expect("Failed to cache rev")?;
+        for row in result {
             let mut cache_guard = self.cache.write().await;
             cache_guard.set(Cid::from_str(&row.0)?, row.1)
         }
@@ -449,33 +461,36 @@ impl SqlRepoReader {
             return Ok(());
         }
         let did: String = self.did.clone();
-        let db: Arc<DbConn> = self.db.clone();
-        use crate::schema::pds::repo_block::dsl as RepoBlockSchema;
+        use crate::schema::actor_store::repo_block::dsl as RepoBlockSchema;
 
         let cid_strings: Vec<String> = cids.into_iter().map(|c| c.to_string()).collect();
-        db.run(move |conn| {
-            delete(RepoBlockSchema::repo_block)
-                .filter(RepoBlockSchema::did.eq(did))
-                .filter(RepoBlockSchema::cid.eq_any(cid_strings))
-                .execute(conn)
-        })
-        .await?;
+        _ = self
+            .db
+            .interact(move |conn| {
+                delete(RepoBlockSchema::repo_block)
+                    .filter(RepoBlockSchema::did.eq(did))
+                    .filter(RepoBlockSchema::cid.eq_any(cid_strings))
+                    .execute(conn)
+            })
+            .await
+            .expect("Failed to delete many")?;
         Ok(())
     }
 
     pub async fn get_root_detailed(&self) -> Result<CidAndRev> {
         let did: String = self.did.clone();
-        let db: Arc<DbConn> = self.db.clone();
-        use crate::schema::pds::repo_root::dsl as RepoRootSchema;
+        use crate::schema::actor_store::repo_root::dsl as RepoRootSchema;
 
-        let res = db
-            .run(move |conn| {
+        let res = self
+            .db
+            .interact(move |conn| {
                 RepoRootSchema::repo_root
                     .filter(RepoRootSchema::did.eq(did))
-                    .select(models::RepoRoot::as_select())
+                    .select(RepoRoot::as_select())
                     .first(conn)
             })
-            .await?;
+            .await
+            .expect("Failed to get root")?;
 
         Ok(CidAndRev {
             cid: Cid::from_str(&res.cid)?,

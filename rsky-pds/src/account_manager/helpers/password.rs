@@ -1,4 +1,3 @@
-use crate::db::DbConn;
 use crate::models;
 use crate::models::AppPassword;
 use anyhow::{anyhow, bail, Result};
@@ -17,19 +16,29 @@ pub struct UpdateUserPasswordOpts {
     pub password_encrypted: String,
 }
 
-pub async fn verify_account_password(did: &str, password: &String, db: &DbConn) -> Result<bool> {
+pub async fn verify_account_password(
+    did: &str,
+    password: &String,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<bool> {
     use crate::schema::pds::account::dsl as AccountSchema;
 
     let did = did.to_owned();
     let found = db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             AccountSchema::account
                 .filter(AccountSchema::did.eq(did))
                 .select(models::Account::as_select())
                 .first(conn)
                 .optional()
         })
-        .await?;
+        .await
+        .expect("Failed to get account")?;
     if let Some(found) = found {
         verify(password, &found.password)
     } else {
@@ -37,14 +46,23 @@ pub async fn verify_account_password(did: &str, password: &String, db: &DbConn) 
     }
 }
 
-pub async fn verify_app_password(did: &str, password: &str, db: &DbConn) -> Result<Option<String>> {
+pub async fn verify_app_password(
+    did: &str,
+    password: &str,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<Option<String>> {
     use crate::schema::pds::app_password::dsl as AppPasswordSchema;
 
     let did = did.to_owned();
     let password = password.to_owned();
     let password_encrypted = hash_app_password(&did, &password).await?;
     let found = db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             AppPasswordSchema::app_password
                 .filter(AppPasswordSchema::did.eq(did))
                 .filter(AppPasswordSchema::password.eq(password_encrypted))
@@ -52,7 +70,8 @@ pub async fn verify_app_password(did: &str, password: &str, db: &DbConn) -> Resu
                 .first(conn)
                 .optional()
         })
-        .await?;
+        .await
+        .expect("Failed to get app password")?;
     if let Some(found) = found {
         Ok(Some(found.name))
     } else {
@@ -100,7 +119,10 @@ pub async fn hash_app_password(did: &String, password: &String) -> Result<String
 pub async fn create_app_password(
     did: String,
     name: String,
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
 ) -> Result<CreateAppPasswordOutput> {
     let str = &get_random_str()[0..16].to_lowercase();
     let chunks = [&str[0..4], &str[4..8], &str[8..12], &str[12..16]];
@@ -111,67 +133,98 @@ pub async fn create_app_password(
 
     let created_at = now();
 
-    db.run(move |conn| {
-        let got: Option<AppPassword> = insert_into(AppPasswordSchema::app_password)
-            .values((
-                AppPasswordSchema::did.eq(did),
-                AppPasswordSchema::name.eq(&name),
-                AppPasswordSchema::password.eq(password_encrypted),
-                AppPasswordSchema::createdAt.eq(&created_at),
-            ))
-            .returning(AppPassword::as_select())
-            .get_result(conn)
-            .optional()?;
-        if got.is_some() {
-            Ok(CreateAppPasswordOutput {
-                name,
-                password,
-                created_at,
-            })
-        } else {
-            bail!("could not create app-specific password")
-        }
-    })
-    .await
+    db.get()
+        .await?
+        .interact(move |conn| {
+            let got: Option<AppPassword> = insert_into(AppPasswordSchema::app_password)
+                .values((
+                    AppPasswordSchema::did.eq(did),
+                    AppPasswordSchema::name.eq(&name),
+                    AppPasswordSchema::password.eq(password_encrypted),
+                    AppPasswordSchema::createdAt.eq(&created_at),
+                ))
+                .returning(AppPassword::as_select())
+                .get_result(conn)
+                .optional()?;
+            if got.is_some() {
+                Ok(CreateAppPasswordOutput {
+                    name,
+                    password,
+                    created_at,
+                })
+            } else {
+                bail!("could not create app-specific password")
+            }
+        })
+        .await
+        .expect("Failed to create app password")
 }
 
-pub async fn list_app_passwords(did: &str, db: &DbConn) -> Result<Vec<(String, String)>> {
+pub async fn list_app_passwords(
+    did: &str,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<Vec<(String, String)>> {
     use crate::schema::pds::app_password::dsl as AppPasswordSchema;
 
     let did = did.to_owned();
-    db.run(move |conn| {
-        Ok(AppPasswordSchema::app_password
-            .filter(AppPasswordSchema::did.eq(did))
-            .select((AppPasswordSchema::name, AppPasswordSchema::createdAt))
-            .get_results(conn)?)
-    })
-    .await
+    db.get()
+        .await?
+        .interact(move |conn| {
+            Ok(AppPasswordSchema::app_password
+                .filter(AppPasswordSchema::did.eq(did))
+                .select((AppPasswordSchema::name, AppPasswordSchema::createdAt))
+                .get_results(conn)?)
+        })
+        .await
+        .expect("Failed to list app passwords")
 }
 
-pub async fn update_user_password(opts: UpdateUserPasswordOpts, db: &DbConn) -> Result<()> {
+pub async fn update_user_password(
+    opts: UpdateUserPasswordOpts,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<()> {
     use crate::schema::pds::account::dsl as AccountSchema;
 
-    db.run(move |conn| {
-        update(AccountSchema::account)
-            .filter(AccountSchema::did.eq(opts.did))
-            .set(AccountSchema::password.eq(opts.password_encrypted))
-            .execute(conn)?;
-        Ok(())
-    })
-    .await
+    db.get()
+        .await?
+        .interact(move |conn| {
+            _ = update(AccountSchema::account)
+                .filter(AccountSchema::did.eq(opts.did))
+                .set(AccountSchema::password.eq(opts.password_encrypted))
+                .execute(conn)?;
+            Ok(())
+        })
+        .await
+        .expect("Failed to update user password")
 }
 
-pub async fn delete_app_password(did: &str, name: &str, db: &DbConn) -> Result<()> {
+pub async fn delete_app_password(
+    did: &str,
+    name: &str,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<()> {
     use crate::schema::pds::app_password::dsl as AppPasswordSchema;
 
     let did = did.to_owned();
     let name = name.to_owned();
-    db.run(move |conn| {
-        delete(AppPasswordSchema::app_password)
-            .filter(AppPasswordSchema::did.eq(did))
-            .filter(AppPasswordSchema::name.eq(name))
-            .execute(conn)?;
-        Ok(())
-    })
-    .await
+    db.get()
+        .await?
+        .interact(move |conn| {
+            _ = delete(AppPasswordSchema::app_password)
+                .filter(AppPasswordSchema::did.eq(did))
+                .filter(AppPasswordSchema::name.eq(name))
+                .execute(conn)?;
+            Ok(())
+        })
+        .await
+        .expect("Failed to delete app password")
 }

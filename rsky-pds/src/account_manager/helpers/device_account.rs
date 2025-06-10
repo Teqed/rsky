@@ -1,4 +1,3 @@
-use crate::db::DbConn;
 use crate::schema::pds::account::dsl as AccountSchema;
 use crate::schema::pds::actor::dsl as ActorSchema;
 use crate::schema::pds::device::dsl as DeviceSchema;
@@ -17,30 +16,44 @@ use rsky_oauth::oauth_provider::oidc::sub::Sub;
 use rsky_oauth::oauth_types::OAuthClientId;
 
 pub async fn add_authorized_client(
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
     device_id: DeviceId,
     sub: Sub,
     client_id: OAuthClientId,
 ) -> Result<()> {
     //TODO
-    // db.run(move |conn| {
+    // db.get().await.expect("Failed to get DB connection")
+    //   .interact(move |conn| {
     //     update(DeviceAccountSchema::device_account)
     //         .set(DeviceAccountSchema::authenticatedAt.eq())
-    // }).await?:
+    // }).await.expect("Failed to add authorized client")?;
     Ok(())
 }
 
-pub async fn remove_qb(device_id: DeviceId, sub: Sub, db: &DbConn) -> Result<()> {
+pub async fn remove_qb(
+    device_id: DeviceId,
+    sub: Sub,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+) -> Result<()> {
     let device_id = device_id.into_inner();
     let did = sub.get();
-    db.run(move |conn| {
-        delete(DeviceAccountSchema::device_account)
-            .filter(DeviceAccountSchema::deviceId.eq(device_id))
-            .filter(DeviceAccountSchema::did.eq(did))
-            .execute(conn)
-    })
-    .await?;
-
+    db.get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
+            delete(DeviceAccountSchema::device_account)
+                .filter(DeviceAccountSchema::deviceId.eq(device_id))
+                .filter(DeviceAccountSchema::did.eq(did))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to remove device_account")?;
     Ok(())
 }
 
@@ -48,12 +61,18 @@ pub async fn get_account_info(
     device_id: DeviceId,
     sub: Sub,
     audience: Audience,
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
 ) -> Result<Option<AccountInfo>> {
     let did = sub.get();
     let device_id = device_id.into_inner();
     let result = db
-        .run(move |conn| {
+        .get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
             ActorSchema::actor
                 .left_join(AccountSchema::account.on(ActorSchema::did.eq(AccountSchema::did)))
                 .inner_join(
@@ -96,7 +115,8 @@ pub async fn get_account_info(
                 )>(conn)
                 .optional()
         })
-        .await?;
+        .await
+        .expect("Failed to get account info")?;
     let entry = match result {
         None => return Ok(None),
         Some(entry) => entry,
@@ -133,12 +153,18 @@ pub async fn get_account_info(
 pub async fn read_qb(
     device_id: DeviceId,
     sub: Sub,
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
 ) -> Result<(bool, String, DateTime<Utc>)> {
     let did = sub.get();
     let device_id = device_id.into_inner();
     let result: (bool, String, DateTime<Utc>) = db
-        .run(move |conn| {
+        .get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
             DeviceAccountSchema::device_account
                 .filter(DeviceAccountSchema::did.eq(did))
                 .filter(DeviceAccountSchema::deviceId.eq(device_id))
@@ -149,18 +175,25 @@ pub async fn read_qb(
                 ))
                 .first(conn)
         })
-        .await?;
+        .await
+        .expect("Failed to read device_account")?;
     Ok(result)
 }
 
 pub async fn list_remembered_devices(
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
     device_id: DeviceId,
     audience: Audience,
 ) -> Result<Vec<AccountInfo>> {
     let device_id = device_id.into_inner();
     let result = db
-        .run(move |conn| {
+        .get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
             ActorSchema::actor
                 .left_join(AccountSchema::account.on(ActorSchema::did.eq(AccountSchema::did)))
                 .inner_join(
@@ -187,7 +220,6 @@ pub async fn list_remembered_devices(
                     DeviceAccountSchema::remember,
                     DeviceAccountSchema::authorizedClients,
                 ))
-                // .load(conn)
                 .load::<(
                     String,
                     Option<String>,
@@ -203,7 +235,8 @@ pub async fn list_remembered_devices(
                     String,
                 )>(conn)
         })
-        .await?;
+        .await
+        .expect("Failed to list remembered devices")?;
     let mut account_infos = vec![];
     for entry in result {
         let sub = Sub::new(entry.0).unwrap();
@@ -237,7 +270,10 @@ pub async fn list_remembered_devices(
 }
 
 pub async fn create_or_update(
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
     device_id: DeviceId,
     sub: Sub,
     remember: bool,
@@ -248,23 +284,27 @@ pub async fn create_or_update(
 
     let authorized_clients: Vec<OAuthClientId> = vec![];
     let authorized_clients = serde_json::to_string(&authorized_clients)?;
-    db.run(move |conn| {
-        insert_into(DeviceAccountSchema::device_account)
-            .values((
-                DeviceAccountSchema::did.eq(&did),
-                DeviceAccountSchema::deviceId.eq(&device_id),
-                DeviceAccountSchema::authorizedClients.eq(&authorized_clients),
-                DeviceAccountSchema::remember.eq(&remember),
-                DeviceAccountSchema::authenticatedAt.eq(&authenticated_at),
-            ))
-            .on_conflict((DeviceAccountSchema::deviceId, DeviceAccountSchema::did))
-            .do_update()
-            .set((
-                DeviceAccountSchema::deviceId.eq(&device_id),
-                DeviceAccountSchema::did.eq(&did),
-            ))
-            .execute(conn)
-    })
-    .await?;
+    db.get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
+            insert_into(DeviceAccountSchema::device_account)
+                .values((
+                    DeviceAccountSchema::did.eq(&did),
+                    DeviceAccountSchema::deviceId.eq(&device_id),
+                    DeviceAccountSchema::authorizedClients.eq(&authorized_clients),
+                    DeviceAccountSchema::remember.eq(&remember),
+                    DeviceAccountSchema::authenticatedAt.eq(&authenticated_at),
+                ))
+                .on_conflict((DeviceAccountSchema::deviceId, DeviceAccountSchema::did))
+                .do_update()
+                .set((
+                    DeviceAccountSchema::deviceId.eq(&device_id),
+                    DeviceAccountSchema::did.eq(&did),
+                ))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to create or update device_account")?;
     Ok(())
 }

@@ -14,7 +14,7 @@ members = [
     "cypher/backend",
     "cypher/frontend",
     "rsky-satnav",
-    "rsky-relay",
+    # "rsky-relay",
     "rsky-oauth",
 ]
 resolver = "2"

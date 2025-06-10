@@ -1,4 +1,3 @@
-use crate::db::DbConn;
 use crate::schema::pds::account::dsl as AccountSchema;
 use crate::schema::pds::actor::dsl as ActorSchema;
 use crate::schema::pds::device_account::dsl as DeviceAccountSchema;
@@ -22,7 +21,10 @@ use rsky_oauth::oauth_types::{
 };
 
 pub async fn create_qb(
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
     token_id: TokenId,
     data: TokenData,
     refresh_token: Option<RefreshToken>,
@@ -49,26 +51,30 @@ pub async fn create_qb(
     let client_auth = serde_json::to_string(&data.client_auth)?;
     let client_id = data.client_id.into_inner();
     let updated_at = Utc::now();
-    db.run(move |conn| {
-        insert_into(TokenSchema::token)
-            .values((
-                TokenSchema::id.eq(&token_id),
-                TokenSchema::tokenId.eq(&token_id),
-                TokenSchema::createdAt.eq(data.created_at),
-                TokenSchema::expiresAt.eq(data.expires_at),
-                TokenSchema::updatedAt.eq(updated_at),
-                TokenSchema::clientId.eq(client_id),
-                TokenSchema::clientAuth.eq(client_auth),
-                TokenSchema::deviceId.eq(device_id),
-                TokenSchema::did.eq(did),
-                TokenSchema::parameters.eq(parameters),
-                TokenSchema::details.eq(details),
-                TokenSchema::code.eq(code),
-                TokenSchema::currentRefreshToken.eq(refresh_token),
-            ))
-            .execute(conn)
-    })
-    .await?;
+    db.get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
+            insert_into(TokenSchema::token)
+                .values((
+                    TokenSchema::id.eq(&token_id),
+                    TokenSchema::tokenId.eq(&token_id),
+                    TokenSchema::createdAt.eq(data.created_at),
+                    TokenSchema::expiresAt.eq(data.expires_at),
+                    TokenSchema::updatedAt.eq(updated_at),
+                    TokenSchema::clientId.eq(client_id),
+                    TokenSchema::clientAuth.eq(client_auth),
+                    TokenSchema::deviceId.eq(device_id),
+                    TokenSchema::did.eq(did),
+                    TokenSchema::parameters.eq(parameters),
+                    TokenSchema::details.eq(details),
+                    TokenSchema::code.eq(code),
+                    TokenSchema::currentRefreshToken.eq(refresh_token),
+                ))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to create token")?;
     Ok(())
 }
 
@@ -80,7 +86,10 @@ pub struct FindByQbOpts {
 }
 
 pub async fn read_token(
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
     opts: FindByQbOpts,
     audience: Audience,
 ) -> Result<Option<TokenInfo>> {
@@ -93,7 +102,10 @@ pub async fn read_token(
     }
 
     let result = db
-        .run(move |conn| {
+        .get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
             let mut builder = ActorSchema::actor
                 .left_join(AccountSchema::account.on(ActorSchema::did.eq(AccountSchema::did)))
                 .inner_join(TokenSchema::token.on(ActorSchema::did.eq(TokenSchema::did)))
@@ -183,7 +195,8 @@ pub async fn read_token(
                 )>(conn)
                 .optional()
         })
-        .await?;
+        .await
+        .expect("Failed to read token")?;
 
     let result = match result {
         None => return Ok(None),
@@ -268,21 +281,39 @@ pub async fn read_token(
     Ok(Some(token_info))
 }
 
-pub async fn remove_qb(db: &DbConn, token_id: TokenId) -> Result<()> {
+pub async fn remove_qb(
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+    token_id: TokenId,
+) -> Result<()> {
     let token_id = token_id.into_inner();
-    // uses "used_refresh_token_fk" to cascade delete
-    db.run(move |conn| {
-        delete(TokenSchema::token)
-            .filter(TokenSchema::tokenId.eq(token_id))
-            .execute(conn)
-    })
-    .await?;
+    db.get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
+            delete(TokenSchema::token)
+                .filter(TokenSchema::tokenId.eq(token_id))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to remove token")?;
     Ok(())
 }
 
-pub async fn for_rotate(db: &DbConn, token_id: String) -> Result<(String, String)> {
+pub async fn for_rotate(
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
+    token_id: String,
+) -> Result<(String, String)> {
     let result = db
-        .run(move |conn| {
+        .get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
             TokenSchema::token
                 .filter(TokenSchema::tokenId.eq(token_id))
                 .filter(TokenSchema::currentRefreshToken.is_not_null())
@@ -292,12 +323,16 @@ pub async fn for_rotate(db: &DbConn, token_id: String) -> Result<(String, String
                 ))
                 .first::<(String, String)>(conn)
         })
-        .await?;
+        .await
+        .expect("Failed to get token for rotate")?;
     Ok(result)
 }
 
 pub async fn rotate_qb(
-    db: &DbConn,
+    db: &deadpool_diesel::Pool<
+        deadpool_diesel::Manager<SqliteConnection>,
+        deadpool_diesel::sqlite::Object,
+    >,
     id: String,
     new_token_id: TokenId,
     new_refresh_token: RefreshToken,
@@ -309,18 +344,22 @@ pub async fn rotate_qb(
     let updated_at = new_data.updated_at;
     let client_auth = serde_json::to_string(&new_data.client_auth)?;
 
-    db.run(move |conn| {
-        update(TokenSchema::token)
-            .filter(TokenSchema::id.eq(id))
-            .set((
-                TokenSchema::tokenId.eq(new_token_id),
-                TokenSchema::currentRefreshToken.eq(new_refresh_token),
-                TokenSchema::expiresAt.eq(expires_at),
-                TokenSchema::updatedAt.eq(updated_at),
-                TokenSchema::clientAuth.eq(client_auth),
-            ))
-            .execute(conn)
-    })
-    .await?;
+    db.get()
+        .await
+        .expect("Failed to get DB connection")
+        .interact(move |conn| {
+            update(TokenSchema::token)
+                .filter(TokenSchema::id.eq(id))
+                .set((
+                    TokenSchema::tokenId.eq(new_token_id),
+                    TokenSchema::currentRefreshToken.eq(new_refresh_token),
+                    TokenSchema::expiresAt.eq(expires_at),
+                    TokenSchema::updatedAt.eq(updated_at),
+                    TokenSchema::clientAuth.eq(client_auth),
+                ))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to rotate token")?;
     Ok(())
 }

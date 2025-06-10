@@ -67,13 +67,15 @@ impl Sequencer {
 
     pub async fn curr(&self) -> Result<Option<i64>> {
         use crate::schema::pds::repo_seq::dsl as RepoSeqSchema;
-        let conn = &mut establish_connection_for_sequencer()?;
+        let pool = establish_connection_for_sequencer()?;
 
-        let got = RepoSeqSchema::repo_seq
-            .select(models::RepoSeq::as_select())
-            .order_by(RepoSeqSchema::seq.desc())
-            .first(conn)
-            .optional()?;
+        let got = pool.get().await?.interact(move |conn| {
+            RepoSeqSchema::repo_seq
+                .select(models::RepoSeq::as_select())
+                .order_by(RepoSeqSchema::seq.desc())
+                .first(conn)
+                .optional()
+        }).await.expect("Failed to get current sequence")?;
         match got {
             None => Ok(None),
             Some(got) => Ok(got.seq),
@@ -82,33 +84,38 @@ impl Sequencer {
 
     pub async fn next_seq(&self, cursor: i64) -> Result<Option<models::RepoSeq>> {
         use crate::schema::pds::repo_seq::dsl as RepoSeqSchema;
-        let conn = &mut establish_connection_for_sequencer()?;
+        let pool = establish_connection_for_sequencer()?;
 
-        let got = RepoSeqSchema::repo_seq
-            .filter(RepoSeqSchema::seq.gt(cursor))
-            .select(models::RepoSeq::as_select())
-            .order_by(RepoSeqSchema::seq.asc())
-            .first(conn)
-            .optional()?;
+        let got = pool.get().await?.interact(move |conn| {
+            RepoSeqSchema::repo_seq
+                .filter(RepoSeqSchema::seq.gt(cursor))
+                .select(models::RepoSeq::as_select())
+                .order_by(RepoSeqSchema::seq.asc())
+                .first(conn)
+                .optional()
+        }).await.expect("Failed to get next sequence")?;
         Ok(got)
     }
 
     pub async fn earliest_after_time(&self, time: String) -> Result<Option<models::RepoSeq>> {
         use crate::schema::pds::repo_seq::dsl as RepoSeqSchema;
-        let conn = &mut establish_connection_for_sequencer()?;
+        let pool = establish_connection_for_sequencer()?;
 
-        let got = RepoSeqSchema::repo_seq
-            .filter(RepoSeqSchema::sequencedAt.ge(time))
-            .select(models::RepoSeq::as_select())
-            .order_by(RepoSeqSchema::sequencedAt.asc())
-            .first(conn)
-            .optional()?;
+        let time_clone = time.clone();
+        let got = pool.get().await?.interact(move |conn| {
+            RepoSeqSchema::repo_seq
+                .filter(RepoSeqSchema::sequencedAt.ge(time_clone))
+                .select(models::RepoSeq::as_select())
+                .order_by(RepoSeqSchema::sequencedAt.asc())
+                .first(conn)
+                .optional()
+        }).await.expect("Failed to get earliest after time")?;
         Ok(got)
     }
 
     pub async fn request_seq_range(&self, opts: RequestSeqRangeOpts) -> Result<Vec<SeqEvt>> {
         use crate::schema::pds::repo_seq::dsl as RepoSeqSchema;
-        let conn = &mut establish_connection_for_sequencer()?;
+        let pool = establish_connection_for_sequencer()?;
 
         let RequestSeqRangeOpts {
             earliest_seq,
@@ -117,26 +124,29 @@ impl Sequencer {
             limit,
         } = opts;
 
-        let mut seq_qb = RepoSeqSchema::repo_seq
-            .select(models::RepoSeq::as_select())
-            .order_by(RepoSeqSchema::seq.asc())
-            .filter(RepoSeqSchema::invalidated.eq(0))
-            .into_boxed();
-        if let Some(earliest_seq) = earliest_seq {
-            seq_qb = seq_qb.filter(RepoSeqSchema::seq.gt(earliest_seq));
-        }
-        if let Some(latest_seq) = latest_seq {
-            seq_qb = seq_qb.filter(RepoSeqSchema::seq.le(latest_seq));
-        }
-        if let Some(earliest_time) = earliest_time {
-            seq_qb = seq_qb.filter(RepoSeqSchema::sequencedAt.ge(earliest_time));
-        }
-        if let Some(limit) = limit {
-            seq_qb = seq_qb.limit(limit);
-        }
+        let rows = pool.get().await?.interact(move |conn| {
+            let mut seq_qb = RepoSeqSchema::repo_seq
+                .select(models::RepoSeq::as_select())
+                .order_by(RepoSeqSchema::seq.asc())
+                .filter(RepoSeqSchema::invalidated.eq(0))
+                .into_boxed();
+            if let Some(earliest_seq) = earliest_seq {
+                seq_qb = seq_qb.filter(RepoSeqSchema::seq.gt(earliest_seq));
+            }
+            if let Some(latest_seq) = latest_seq {
+                seq_qb = seq_qb.filter(RepoSeqSchema::seq.le(latest_seq));
+            }
+            if let Some(earliest_time) = earliest_time {
+                seq_qb = seq_qb.filter(RepoSeqSchema::sequencedAt.ge(earliest_time));
+            }
+            if let Some(limit) = limit {
+                seq_qb = seq_qb.limit(limit);
+            }
 
-        let rows = seq_qb.get_results(conn)?;
-        if rows.len() < 1 {
+            seq_qb.get_results(conn)
+        }).await.expect("Failed to request sequence range")?;
+
+        if rows.is_empty() {
             return Ok(vec![]);
         }
 
@@ -202,16 +212,24 @@ impl Sequencer {
 
     pub async fn sequence_evt(&mut self, evt: models::RepoSeq) -> Result<i64> {
         use crate::schema::pds::repo_seq::dsl as RepoSeqSchema;
-        let conn = &mut establish_connection_for_sequencer()?;
+        let pool = establish_connection_for_sequencer()?;
 
-        let res = insert_into(RepoSeqSchema::repo_seq)
-            .values((
-                RepoSeqSchema::did.eq(evt.did),
-                RepoSeqSchema::event.eq(evt.event),
-                RepoSeqSchema::eventType.eq(evt.event_type),
-                RepoSeqSchema::sequencedAt.eq(evt.sequenced_at),
-            ))
-            .get_result::<models::RepoSeq>(conn)?;
+        let did = evt.did;
+        let event = evt.event;
+        let event_type = evt.event_type;
+        let sequenced_at = evt.sequenced_at;
+
+        let res = pool.get().await?.interact(move |conn| {
+            insert_into(RepoSeqSchema::repo_seq)
+                .values((
+                    RepoSeqSchema::did.eq(did),
+                    RepoSeqSchema::event.eq(event),
+                    RepoSeqSchema::eventType.eq(event_type),
+                    RepoSeqSchema::sequencedAt.eq(sequenced_at),
+                ))
+                .get_result::<models::RepoSeq>(conn)
+        }).await.expect("Failed to sequence event")?;
+        
         self.crawlers.notify_of_update().await?;
         Ok(res.seq.expect("Sequence number wasn't updated on insert."))
     }
@@ -262,25 +280,31 @@ impl Stream for Sequencer {
         if self.destroyed {
             return Poll::Ready(None);
         }
-        // if already polling, do not start another poll
-        return match futures::executor::block_on(self.request_seq_range(RequestSeqRangeOpts {
+        
+        // Store the waker for future notifications
+        self.waker = Some(cx.waker().clone());
+        
+        // If already polling, do not start another poll
+        let opts = RequestSeqRangeOpts {
             earliest_seq: self.last_seen,
             latest_seq: None,
             earliest_time: None,
             limit: Some(1000),
-        })) {
+        };
+        
+        // Use a ready future to drive our async function - this avoids nesting block_on calls
+        match futures::executor::block_on(self.request_seq_range(opts)) {
             Err(err) => {
                 tracing::error!(
                     "@LOG: sequencer failed to poll db, err: {}, last_seen: {:?}",
                     err.to_string(),
                     self.last_seen
                 );
-                self.waker = Some(cx.waker().clone());
                 futures::executor::block_on(self.exponential_backoff());
                 Poll::Ready(Some(Err(err)))
             }
             Ok(evts) => {
-                if evts.len() > 0 {
+                if !evts.is_empty() {
                     self.tries_with_no_results = 0;
                     futures::executor::block_on(EVENT_EMITTER.write()).emit(
                         "events",
@@ -292,30 +316,32 @@ impl Stream for Sequencer {
                         None => self.last_seen,
                         Some(last_evt) => Some(last_evt.seq()),
                     };
-                    self.waker = Some(cx.waker().clone());
                     Poll::Ready(Some(Ok(())))
                 } else {
-                    self.waker = Some(cx.waker().clone());
                     futures::executor::block_on(self.exponential_backoff());
                     Poll::Pending
                 }
             }
-        };
+        }
     }
 }
 
 pub async fn delete_all_for_user(did: &String, excluding_seqs: Option<Vec<i64>>) -> Result<()> {
     use crate::schema::pds::repo_seq::dsl as RepoSeqSchema;
-    let conn = &mut establish_connection_for_sequencer()?;
+    let pool = establish_connection_for_sequencer()?;
     let excluding_seqs = excluding_seqs.unwrap_or_else(|| vec![]);
+    let did_clone = did.clone();
 
-    let mut builder = delete(RepoSeqSchema::repo_seq)
-        .filter(RepoSeqSchema::did.eq(did))
-        .into_boxed();
-    if excluding_seqs.len() > 0 {
-        builder = builder.filter(RepoSeqSchema::seq.ne_all(excluding_seqs));
-    }
-    builder.execute(conn)?;
+    pool.get().await?.interact(move |conn| {
+        let mut builder = delete(RepoSeqSchema::repo_seq)
+            .filter(RepoSeqSchema::did.eq(did_clone))
+            .into_boxed();
+        if !excluding_seqs.is_empty() {
+            builder = builder.filter(RepoSeqSchema::seq.ne_all(excluding_seqs));
+        }
+        builder.execute(conn)
+    }).await.expect("Failed to delete sequences for user")?;
+    
     Ok(())
 }
 

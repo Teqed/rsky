@@ -8,7 +8,6 @@ use chrono::offset::Utc as UtcOffset;
 use chrono::DateTime;
 use diesel::dsl::{exists, not, LeftJoinOn};
 use diesel::helper_types::{Eq, IntoBoxed};
-use diesel::pg::Pg;
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use diesel::*;
 use rsky_common;
@@ -56,7 +55,7 @@ pub struct GetAccountAdminStatusOutput {
 
 pub type ActorJoinAccount =
     LeftJoinOn<ActorTable, AccountTable, Eq<ActorSchema::did, AccountSchema::did>>;
-pub type BoxedQuery<'a> = IntoBoxed<'a, ActorJoinAccount, Pg>;
+pub type BoxedQuery<'life> = dsl::IntoBoxed<'life, ActorJoinAccount, sqlite::Sqlite>;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ActorAccount {
@@ -81,7 +80,7 @@ pub fn select_account_qb(flags: Option<AvailabilityFlags>) -> BoxedQuery<'static
     let AvailabilityFlags {
         include_taken_down,
         include_deactivated,
-    } = flags.unwrap_or_else(|| AvailabilityFlags {
+    } = flags.unwrap_or(AvailabilityFlags {
         include_taken_down: Some(false),
         include_deactivated: Some(false),
     });
@@ -107,7 +106,9 @@ pub async fn get_account(
 ) -> Result<Option<ActorAccount>> {
     let handle_or_did = _handle_or_did.to_owned();
     let found = db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             let mut builder = select_account_qb(flags);
             if handle_or_did.starts_with("did:") {
                 builder = builder.filter(ActorSchema::did.eq(handle_or_did));
@@ -151,7 +152,8 @@ pub async fn get_account(
                 })
                 .optional()
         })
-        .await?;
+        .await
+        .expect("Failed to get account")?;
     Ok(found)
 }
 
@@ -162,7 +164,9 @@ pub async fn get_account_by_email(
 ) -> Result<Option<ActorAccount>> {
     let email = _email.to_owned();
     let found = db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             select_account_qb(flags)
                 .select((
                     ActorSchema::did,
@@ -200,7 +204,8 @@ pub async fn get_account_by_email(
                 })
                 .optional()
         })
-        .await?;
+        .await
+        .expect("Failed to get account")?;
     Ok(found)
 }
 
@@ -226,7 +231,9 @@ pub async fn register_actor(
     };
 
     let _: String = db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             insert_into(ActorSchema::actor)
                 .values((
                     ActorSchema::did.eq(did),
@@ -239,7 +246,8 @@ pub async fn register_actor(
                 .returning(ActorSchema::did)
                 .get_result(conn)
         })
-        .await?;
+        .await
+        .expect("Failed to register actor")?;
     Ok(())
 }
 
@@ -253,7 +261,9 @@ pub async fn register_account(
 
     // @TODO record recovery key for bring your own recovery key
     let _: String = db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             insert_into(AccountSchema::account)
                 .values((
                     AccountSchema::did.eq(did),
@@ -265,34 +275,58 @@ pub async fn register_account(
                 .returning(AccountSchema::did)
                 .get_result(conn)
         })
-        .await?;
+        .await
+        .expect("Failed to register account")?;
     Ok(())
 }
 
-pub async fn delete_account(did: &str, db: &DbConn) -> Result<()> {
+pub async fn delete_account(did: &str, db: &DbConn, actor_db: &DbConn) -> Result<()> {
+    use crate::schema::actor_store::repo_root::dsl as RepoRootSchema;
     use crate::schema::pds::email_token::dsl as EmailTokenSchema;
     use crate::schema::pds::refresh_token::dsl as RefreshTokenSchema;
-    use crate::schema::pds::repo_root::dsl as RepoRootSchema;
 
-    let did = did.to_owned();
-    db.run(move |conn| {
-        delete(RepoRootSchema::repo_root)
-            .filter(RepoRootSchema::did.eq(&did))
-            .execute(conn)?;
-        delete(EmailTokenSchema::email_token)
-            .filter(EmailTokenSchema::did.eq(&did))
-            .execute(conn)?;
-        delete(RefreshTokenSchema::refresh_token)
-            .filter(RefreshTokenSchema::did.eq(&did))
-            .execute(conn)?;
-        delete(AccountSchema::account)
-            .filter(AccountSchema::did.eq(&did))
-            .execute(conn)?;
-        delete(ActorSchema::actor)
-            .filter(ActorSchema::did.eq(&did))
-            .execute(conn)
-    })
-    .await?;
+    let did_clone = did.to_owned();
+    _ = actor_db
+        .get()
+        .await?
+        .interact(move |conn| {
+            delete(RepoRootSchema::repo_root)
+                .filter(RepoRootSchema::did.eq(&did_clone))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to delete actor")?;
+    let did_clone = did.to_owned();
+    _ = db
+        .get()
+        .await?
+        .interact(move |conn| {
+            _ = delete(EmailTokenSchema::email_token)
+                .filter(EmailTokenSchema::did.eq(&did_clone))
+                .execute(conn)?;
+            _ = delete(RefreshTokenSchema::refresh_token)
+                .filter(RefreshTokenSchema::did.eq(&did_clone))
+                .execute(conn)?;
+            _ = delete(AccountSchema::account)
+                .filter(AccountSchema::did.eq(&did_clone))
+                .execute(conn)?;
+            delete(ActorSchema::actor)
+                .filter(ActorSchema::did.eq(&did_clone))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to delete account")?;
+
+    let data_repo_file = format!("data/repo/{}.db", did.to_owned());
+    let data_blob_path = format!("data/blob/{}", did);
+    let data_blob_path = std::path::Path::new(&data_blob_path);
+    let data_repo_file = std::path::Path::new(&data_repo_file);
+    if data_repo_file.exists() {
+        std::fs::remove_file(data_repo_file)?;
+    };
+    if data_blob_path.exists() {
+        std::fs::remove_dir_all(data_blob_path)?;
+    };
     Ok(())
 }
 
@@ -302,20 +336,23 @@ pub async fn update_account_takedown_status(
     db: &DbConn,
 ) -> Result<()> {
     let takedown_ref: Option<String> = match takedown.applied {
-        true => match takedown.r#ref {
-            Some(takedown_ref) => Some(takedown_ref),
-            None => Some(rsky_common::now()),
-        },
+        true => takedown
+            .r#ref
+            .map_or_else(|| Some(rsky_common::now()), Some),
         false => None,
     };
     let did = did.to_owned();
-    db.run(move |conn| {
-        update(ActorSchema::actor)
-            .filter(ActorSchema::did.eq(did))
-            .set((ActorSchema::takedownRef.eq(takedown_ref),))
-            .execute(conn)
-    })
-    .await?;
+    _ = db
+        .get()
+        .await?
+        .interact(move |conn| {
+            update(ActorSchema::actor)
+                .filter(ActorSchema::did.eq(did))
+                .set((ActorSchema::takedownRef.eq(takedown_ref),))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to update account takedown status")?;
     Ok(())
 }
 
@@ -325,31 +362,39 @@ pub async fn deactivate_account(
     db: &DbConn,
 ) -> Result<()> {
     let did = did.to_owned();
-    db.run(move |conn| {
-        update(ActorSchema::actor)
-            .filter(ActorSchema::did.eq(did))
-            .set((
-                ActorSchema::deactivatedAt.eq(rsky_common::now()),
-                ActorSchema::deleteAfter.eq(delete_after),
-            ))
-            .execute(conn)
-    })
-    .await?;
+    _ = db
+        .get()
+        .await?
+        .interact(move |conn| {
+            update(ActorSchema::actor)
+                .filter(ActorSchema::did.eq(did))
+                .set((
+                    ActorSchema::deactivatedAt.eq(rsky_common::now()),
+                    ActorSchema::deleteAfter.eq(delete_after),
+                ))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to deactivate account")?;
     Ok(())
 }
 
 pub async fn activate_account(did: &str, db: &DbConn) -> Result<()> {
     let did = did.to_owned();
-    db.run(move |conn| {
-        update(ActorSchema::actor)
-            .filter(ActorSchema::did.eq(did))
-            .set((
-                ActorSchema::deactivatedAt.eq::<Option<String>>(None),
-                ActorSchema::deleteAfter.eq::<Option<String>>(None),
-            ))
-            .execute(conn)
-    })
-    .await?;
+    _ = db
+        .get()
+        .await?
+        .interact(move |conn| {
+            update(ActorSchema::actor)
+                .filter(ActorSchema::did.eq(did))
+                .set((
+                    ActorSchema::deactivatedAt.eq::<Option<String>>(None),
+                    ActorSchema::deleteAfter.eq::<Option<String>>(None),
+                ))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to activate account")?;
     Ok(())
 }
 
@@ -357,7 +402,9 @@ pub async fn update_email(did: &str, email: &str, db: &DbConn) -> Result<()> {
     let did = did.to_owned();
     let email = email.to_owned();
     let res = db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             update(AccountSchema::account)
                 .filter(AccountSchema::did.eq(did))
                 .set((
@@ -366,7 +413,8 @@ pub async fn update_email(did: &str, email: &str, db: &DbConn) -> Result<()> {
                 ))
                 .execute(conn)
         })
-        .await;
+        .await
+        .expect("Failed to update email");
 
     match res {
         Ok(_) => Ok(()),
@@ -390,14 +438,17 @@ pub async fn update_handle(did: &str, handle: &str, db: &DbConn) -> Result<()> {
     let did = did.to_owned();
     let handle = handle.to_owned();
     let res = db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             update(ActorSchema::actor)
                 .filter(ActorSchema::did.eq(did))
                 .filter(not(exists(actor2.filter(ActorSchema::handle.eq(&handle)))))
                 .set((ActorSchema::handle.eq(&handle),))
                 .execute(conn)
         })
-        .await?;
+        .await
+        .expect("Failed to update handle")?;
 
     if res < 1 {
         return Err(anyhow::Error::new(
@@ -413,13 +464,17 @@ pub async fn set_email_confirmed_at(
     db: &DbConn,
 ) -> Result<()> {
     let did = did.to_owned();
-    db.run(move |conn| {
-        update(AccountSchema::account)
-            .filter(AccountSchema::did.eq(did))
-            .set(AccountSchema::emailConfirmedAt.eq(email_confirmed_at))
-            .execute(conn)
-    })
-    .await?;
+    _ = db
+        .get()
+        .await?
+        .interact(move |conn| {
+            update(AccountSchema::account)
+                .filter(AccountSchema::did.eq(did))
+                .set(AccountSchema::emailConfirmedAt.eq(email_confirmed_at))
+                .execute(conn)
+        })
+        .await
+        .expect("Failed to set email confirmed at")?;
     Ok(())
 }
 
@@ -429,27 +484,30 @@ pub async fn get_account_admin_status(
 ) -> Result<Option<GetAccountAdminStatusOutput>> {
     let did = did.to_owned();
     let res: Option<(Option<String>, Option<String>)> = db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             ActorSchema::actor
                 .filter(ActorSchema::did.eq(did))
                 .select((ActorSchema::takedownRef, ActorSchema::deactivatedAt))
                 .first(conn)
                 .optional()
         })
-        .await?;
+        .await
+        .expect("Failed to get account admin status")?;
     match res {
         None => Ok(None),
         Some(res) => {
-            let takedown = match res.0 {
-                Some(takedown_ref) => StatusAttr {
-                    applied: true,
-                    r#ref: Some(takedown_ref),
-                },
-                None => StatusAttr {
+            let takedown = res.0.map_or(
+                StatusAttr {
                     applied: false,
                     r#ref: None,
                 },
-            };
+                |takedown_ref| StatusAttr {
+                    applied: true,
+                    r#ref: Some(takedown_ref),
+                },
+            );
             let deactivated = match res.1 {
                 Some(_) => StatusAttr {
                     applied: true,

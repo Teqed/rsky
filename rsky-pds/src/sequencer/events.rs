@@ -1,6 +1,6 @@
 use crate::account_manager::helpers::account::AccountStatus;
 use crate::actor_store::repo::types::SyncEvtData;
-use crate::models::models;
+use crate::models::models::pds as models;
 use anyhow::Result;
 use lexicon_cid::Cid;
 use rsky_common;

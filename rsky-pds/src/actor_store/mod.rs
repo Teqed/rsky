@@ -1,14 +1,14 @@
 // based on https://github.com/bluesky-social/atproto/blob/main/packages/repo/src/repo.ts
 // also adds components from https://github.com/bluesky-social/atproto/blob/main/packages/pds/src/actor-store/repo/transactor.ts
 
-use crate::actor_store::aws::s3::S3BlobStore;
+use crate::actor_store::blob::local::BlobStoreFs;
 use crate::actor_store::blob::BlobReader;
 use crate::actor_store::preference::PreferenceReader;
 use crate::actor_store::record::RecordReader;
 use crate::actor_store::repo::sql_repo::SqlRepoReader;
 use crate::actor_store::repo::types::SyncEvtData;
-use crate::db::DbConn;
 use anyhow::Result;
+use deadpool_diesel::sqlite::Pool;
 use diesel::*;
 use futures::stream::{self, StreamExt};
 use lexicon_cid::Cid;
@@ -25,9 +25,16 @@ use rsky_syntax::aturi::AtUri;
 use secp256k1::{Keypair, Secp256k1, SecretKey};
 use std::env;
 use std::fmt;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+pub mod aws;
+pub mod blob;
+pub mod preference;
+pub mod record;
+pub mod repo;
 
 #[derive(Debug)]
 enum FormatCommitError {
@@ -52,6 +59,23 @@ impl fmt::Display for FormatCommitError {
 
 impl std::error::Error for FormatCommitError {}
 
+/// The actor pools for the database connections.
+pub struct ActorStorage {
+    /// The database connection pool for the actor's repository.
+    pub repo: Pool,
+    /// The file storage path for the actor's blobs.
+    pub blob: PathBuf,
+}
+
+impl Clone for ActorStorage {
+    fn clone(&self) -> Self {
+        Self {
+            repo: self.repo.clone(),
+            blob: self.blob.clone(),
+        }
+    }
+}
+
 pub struct ActorStore {
     pub did: String,
     pub storage: Arc<RwLock<SqlRepoReader>>, // get ipld blocks from db
@@ -62,20 +86,42 @@ pub struct ActorStore {
 
 // Combination of RepoReader/Transactor, BlobReader/Transactor, SqlRepoReader/Transactor
 impl ActorStore {
-    /// Concrete reader of an individual repo (hence S3BlobStore which takes `did` param)
-    pub fn new(did: String, blobstore: S3BlobStore, db: DbConn) -> Self {
-        let db = Arc::new(db);
-        ActorStore {
-            storage: Arc::new(RwLock::new(SqlRepoReader::new(
-                did.clone(),
-                None,
-                db.clone(),
-            ))),
+    /// Concrete reader of an individual repo (hence BlobStoreFs which takes `did` param)
+    pub fn new(
+        did: String,
+        blobstore: BlobStoreFs,
+        db: deadpool_diesel::Pool<
+            deadpool_diesel::Manager<SqliteConnection>,
+            deadpool_diesel::sqlite::Object,
+        >,
+        conn: deadpool_diesel::sqlite::Object,
+    ) -> Self {
+        Self {
+            storage: Arc::new(RwLock::new(SqlRepoReader::new(did.clone(), None, conn))),
             record: RecordReader::new(did.clone(), db.clone()),
             pref: PreferenceReader::new(did.clone(), db.clone()),
             did,
-            blob: BlobReader::new(blobstore, db.clone()), // Unlike TS impl, just use blob reader vs generator
+            blob: BlobReader::new(blobstore, db),
         }
+    }
+
+    /// Create a new ActorStore taking ActorPools HashMap as input
+    pub async fn from_actor_pools(
+        did: &String,
+        hashmap_actor_pools: &std::collections::HashMap<String, ActorStorage>,
+    ) -> Self {
+        let actor_pool = hashmap_actor_pools
+            .get(did)
+            .expect("Actor pool not found")
+            .clone();
+        let blobstore = BlobStoreFs::new(did.clone(), actor_pool.blob);
+        let conn = actor_pool
+            .repo
+            .clone()
+            .get()
+            .await
+            .expect("Failed to get connection");
+        Self::new(did.clone(), blobstore, actor_pool.repo, conn)
     }
 
     pub async fn get_repo_root(&self) -> Option<Cid> {
@@ -112,8 +158,11 @@ impl ActorStore {
             Some(write_ops),
         )
         .await?;
-        let storage_guard = self.storage.read().await;
-        storage_guard.apply_commit(commit.clone(), None).await?;
+        self.storage
+            .read()
+            .await
+            .apply_commit(commit.clone(), None)
+            .await?;
         let writes = writes
             .into_iter()
             .map(PreparedWrite::Create)
@@ -147,8 +196,11 @@ impl ActorStore {
             Some(write_ops),
         )
         .await?;
-        let storage_guard = self.storage.read().await;
-        storage_guard.apply_commit(commit.clone(), None).await?;
+        self.storage
+            .read()
+            .await
+            .apply_commit(commit.clone(), None)
+            .await?;
         let write_commit_ops = writes.iter().try_fold(
             Vec::with_capacity(writes.len()),
             |mut acc, w| -> Result<Vec<CommitOp>> {
@@ -156,7 +208,7 @@ impl ActorStore {
                 acc.push(CommitOp {
                     action: CommitAction::Create,
                     path: format_data_key(aturi.get_collection(), aturi.get_rkey()),
-                    cid: Some(w.cid.clone()),
+                    cid: Some(w.cid),
                     prev: None,
                 });
                 Ok(acc)
@@ -187,8 +239,11 @@ impl ActorStore {
                 .await?;
         }
         // persist the commit to repo storage
-        let storage_guard = self.storage.read().await;
-        storage_guard.apply_commit(commit.clone(), None).await?;
+        self.storage
+            .read()
+            .await
+            .apply_commit(commit.clone(), None)
+            .await?;
         // process blobs
         self.blob.process_write_blobs(writes).await?;
         Ok(())
@@ -214,8 +269,9 @@ impl ActorStore {
                 .await?;
         }
         // persist the commit to repo storage
-        let storage_guard = self.storage.read().await;
-        storage_guard
+        self.storage
+            .read()
+            .await
             .apply_commit(commit.commit_data.clone(), None)
             .await?;
         // process blobs
@@ -224,9 +280,13 @@ impl ActorStore {
     }
 
     pub async fn get_sync_event_data(&mut self) -> Result<SyncEvtData> {
-        let storage_guard = self.storage.read().await;
-        let current_root = storage_guard.get_root_detailed().await?;
-        let blocks_and_missing = storage_guard.get_blocks(vec![current_root.cid]).await?;
+        let current_root = self.storage.read().await.get_root_detailed().await?;
+        let blocks_and_missing = self
+            .storage
+            .read()
+            .await
+            .get_blocks(vec![current_root.cid])
+            .await?;
         Ok(SyncEvtData {
             cid: current_root.cid,
             rev: current_root.rev,
@@ -252,8 +312,11 @@ impl ActorStore {
                 }
             }
             {
-                let mut storage_guard = self.storage.write().await;
-                storage_guard.cache_rev(current_root.rev).await?;
+                self.storage
+                    .write()
+                    .await
+                    .cache_rev(current_root.rev)
+                    .await?;
             }
             let mut new_record_cids: Vec<Cid> = vec![];
             let mut delete_and_update_uris = vec![];
@@ -294,7 +357,7 @@ impl ActorStore {
                     cid,
                     prev: None,
                 };
-                if let Some(_) = current_record {
+                if current_record.is_some() {
                     op.prev = current_record;
                 };
                 commit_ops.push(op);
@@ -340,9 +403,12 @@ impl ActorStore {
                 .collect::<Result<Vec<RecordWriteOp>>>()?;
             // @TODO: Use repo signing key global config
             let secp = Secp256k1::new();
-            let repo_private_key = env::var("PDS_REPO_SIGNING_KEY_K256_PRIVATE_KEY_HEX").unwrap();
-            let repo_secret_key =
-                SecretKey::from_slice(&hex::decode(repo_private_key.as_bytes()).unwrap()).unwrap();
+            let repo_private_key = env::var("PDS_REPO_SIGNING_KEY_K256_PRIVATE_KEY_HEX")
+                .expect("PDS_REPO_SIGNING_KEY_K256_PRIVATE_KEY_HEX not set");
+            let repo_secret_key = SecretKey::from_slice(
+                &hex::decode(repo_private_key.as_bytes()).expect("Failed to decode hex"),
+            )
+            .expect("Failed to create secret key from hex");
             let repo_signing_key = Keypair::from_secret_key(&secp, &repo_secret_key);
 
             let mut commit = repo
@@ -381,72 +447,80 @@ impl ActorStore {
     pub async fn index_writes(&self, writes: Vec<PreparedWrite>, rev: &str) -> Result<()> {
         let now: &str = &rsky_common::now();
 
-        let _ = stream::iter(writes)
-            .then(|write| async move {
-                Ok::<(), anyhow::Error>(match write {
-                    PreparedWrite::Create(write) => {
-                        let write_at_uri: AtUri = write.uri.try_into()?;
-                        self.record
-                            .index_record(
-                                write_at_uri.clone(),
-                                write.cid,
-                                Some(write.record),
-                                Some(write.action),
-                                rev.to_owned(),
-                                Some(now.to_string()),
-                            )
-                            .await?
+        drop(
+            stream::iter(writes)
+                .then(async move |write| {
+                    match write {
+                        PreparedWrite::Create(write) => {
+                            let write_at_uri: AtUri = write.uri.try_into()?;
+                            self.record
+                                .index_record(
+                                    write_at_uri.clone(),
+                                    write.cid,
+                                    Some(write.record),
+                                    Some(write.action),
+                                    rev.to_owned(),
+                                    Some(now.to_owned()),
+                                )
+                                .await?;
+                        }
+                        PreparedWrite::Update(write) => {
+                            let write_at_uri: AtUri = write.uri.try_into()?;
+                            self.record
+                                .index_record(
+                                    write_at_uri.clone(),
+                                    write.cid,
+                                    Some(write.record),
+                                    Some(write.action),
+                                    rev.to_owned(),
+                                    Some(now.to_owned()),
+                                )
+                                .await?;
+                        }
+                        PreparedWrite::Delete(write) => {
+                            let write_at_uri: AtUri = write.uri.try_into()?;
+                            self.record.delete_record(&write_at_uri).await?;
+                        }
                     }
-                    PreparedWrite::Update(write) => {
-                        let write_at_uri: AtUri = write.uri.try_into()?;
-                        self.record
-                            .index_record(
-                                write_at_uri.clone(),
-                                write.cid,
-                                Some(write.record),
-                                Some(write.action),
-                                rev.to_owned(),
-                                Some(now.to_string()),
-                            )
-                            .await?
-                    }
-                    PreparedWrite::Delete(write) => {
-                        let write_at_uri: AtUri = write.uri.try_into()?;
-                        self.record.delete_record(&write_at_uri).await?
-                    }
+                    Ok::<(), anyhow::Error>(())
                 })
-            })
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
+                .collect::<Vec<_>>()
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()?,
+        );
         Ok(())
     }
 
     pub async fn destroy(&mut self) -> Result<()> {
         let did: String = self.did.clone();
-        let storage_guard = self.storage.read().await;
-        let db: Arc<DbConn> = storage_guard.db.clone();
-        use crate::schema::pds::blob::dsl as BlobSchema;
+        use crate::schema::actor_store::blob::dsl as BlobSchema;
 
-        let blob_rows: Vec<String> = db
-            .run(move |conn| {
+        let blob_rows: Vec<String> = self
+            .storage
+            .read()
+            .await
+            .db
+            .interact(move |conn| {
                 BlobSchema::blob
                     .filter(BlobSchema::did.eq(did))
                     .select(BlobSchema::cid)
                     .get_results(conn)
             })
-            .await?;
+            .await
+            .expect("Failed to get blob rows")?;
         let cids = blob_rows
             .into_iter()
             .map(|row| Ok(Cid::from_str(&row)?))
             .collect::<Result<Vec<Cid>>>()?;
-        let _ = stream::iter(cids.chunks(500))
-            .then(|chunk| async { self.blob.blobstore.delete_many(chunk.to_vec()).await })
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
+        drop(
+            stream::iter(cids.chunks(500))
+                .then(|chunk| async { self.blob.blobstore.delete_many(chunk.to_vec()).await })
+                .collect::<Vec<_>>()
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()?,
+        );
         Ok(())
     }
 
@@ -459,14 +533,16 @@ impl ActorStore {
             return Ok(vec![]);
         }
         let did: String = self.did.clone();
-        let storage_guard = self.storage.read().await;
-        let db: Arc<DbConn> = storage_guard.db.clone();
-        use crate::schema::pds::record::dsl as RecordSchema;
+        use crate::schema::actor_store::record::dsl as RecordSchema;
 
         let cid_strs: Vec<String> = cids.into_iter().map(|c| c.to_string()).collect();
         let touched_uri_strs: Vec<String> = touched_uris.iter().map(|t| t.to_string()).collect();
-        let res: Vec<String> = db
-            .run(move |conn| {
+        let res: Vec<String> = self
+            .storage
+            .read()
+            .await
+            .db
+            .interact(move |conn| {
                 RecordSchema::record
                     .filter(RecordSchema::did.eq(did))
                     .filter(RecordSchema::cid.eq_any(cid_strs))
@@ -474,15 +550,10 @@ impl ActorStore {
                     .select(RecordSchema::cid)
                     .get_results(conn)
             })
-            .await?;
+            .await
+            .expect("Failed to get duplicate record cids")?;
         res.into_iter()
-            .map(|row| Cid::from_str(&row).map_err(|error| anyhow::Error::new(error)))
+            .map(|row| Cid::from_str(&row).map_err(anyhow::Error::new))
             .collect::<Result<Vec<Cid>>>()
     }
 }
-
-pub mod aws;
-pub mod blob;
-pub mod preference;
-pub mod record;
-pub mod repo;
