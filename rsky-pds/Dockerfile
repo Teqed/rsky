@@ -15,6 +15,7 @@ COPY rsky-common rsky-common
 COPY rsky-crypto rsky-crypto
 COPY rsky-feedgen rsky-feedgen
 COPY rsky-firehose rsky-firehose
+COPY rsky-oauth rsky-oauth
 COPY rsky-identity rsky-identity
 COPY rsky-jetstream-subscriber rsky-jetstream-subscriber
 COPY rsky-labeler rsky-labeler
