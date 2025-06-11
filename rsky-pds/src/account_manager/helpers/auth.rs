@@ -1,4 +1,4 @@
-use crate::auth_verifier_rocket::AuthScope;
+use crate::auth::auth_scope::AuthScope;
 use crate::models;
 use anyhow::Result;
 use diesel::*;

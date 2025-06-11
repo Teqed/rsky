@@ -1,210 +1,210 @@
+use crate::account_manager::helpers::account::{ActorAccount, AvailabilityFlags};
+use crate::account_manager::helpers::auth::CustomClaimObj;
 use crate::auth::{
-    access_output::AccessOutput,
-    auth_scope::AuthScope,
     error::AuthError,
-    jwt_payload::JwtPayload,
-    service_jwt_opts::ServiceJwtOpts,
-    validate_access_token_opts::ValidateAccessTokenOpts,
-    validated_bearer::ValidatedBearer,
-    verified_service_jwt::VerifiedServiceJwt,
-    utils::{bearer_token_from_req},
+    types::{
+        AccessOutput, Credentials, JwtPayload, ServiceJwtOpts, ValidateAccessTokenOpts,
+        VerifiedServiceJwt,
+    },
+    utils::bearer_token_from_req,
+    AuthScope, ValidatedBearer,
 };
+use crate::AccountManager;
+use crate::AppState;
+use anyhow::{bail, Result};
 use axum::http::HeaderMap;
+use jwt_simple::prelude::*;
+use secp256k1::{Keypair, Secp256k1, SecretKey};
 use std::collections::HashSet;
 use std::env;
-use anyhow::{Result, bail};
-use async_trait::async_trait;
-
-// Placeholder for actual JWT and key types
-// use jwt_simple::prelude::*;
-// use crate::account_manager::helpers::auth::CustomClaimObj;
+use std::sync::Arc;
 
 pub async fn access_check(
     headers: &HeaderMap,
     scopes: Vec<AuthScope>,
     opts: Option<ValidateAccessTokenOpts>,
+    account_manager: &AccountManager,
 ) -> Result<AccessOutput, AuthError> {
-    match validate_access_token(headers, scopes, opts).await {
-        Ok(access) => Ok(access),
-        Err(e) => Err(e),
-    }
+    validate_access_token(headers, scopes, opts, account_manager).await
 }
 
 pub async fn validate_bearer_access_token(
     headers: &HeaderMap,
     scopes: Vec<AuthScope>,
 ) -> Result<AccessOutput, AuthError> {
-    use std::env;
-    let audience = env::var("PDS_SERVICE_DID").map_err(|_| AuthError::InternalServerError)?;
-    // NOTE: VerificationOptions and audience checks would be passed to validate_bearer_token in a real implementation.
-    let validated = validate_bearer_token(headers, scopes, Some(audience.clone())).await?;
-    let is_privileged = matches!(validated.scope, AuthScope::Access | AuthScope::AppPassPrivileged);
+    let mut options = VerificationOptions::default();
+    options.allowed_audiences = Some(HashSet::from_strings(&[
+        env::var("PDS_SERVICE_DID").unwrap()
+    ]));
+    let ValidatedBearer {
+        did,
+        scope,
+        token,
+        audience,
+        ..
+    } = validate_bearer_token(headers, scopes, Some(options)).await?;
+    let is_privileged = vec![AuthScope::Access, AuthScope::AppPassPrivileged].contains(&scope);
     Ok(AccessOutput {
         credentials: Some(Credentials {
             r#type: "access".to_string(),
-            did: Some(validated.did),
-            scope: Some(validated.scope),
-            audience: validated.audience.clone(),
-            token_id: validated.payload.jti.clone(),
-            aud: validated.payload.aud.as_ref().map(|a| format!("{:?}", a)),
+            did: Some(did),
+            scope: Some(scope),
+            audience,
+            token_id: None,
+            aud: None,
             iss: None,
             is_privileged: Some(is_privileged),
         }),
-        artifacts: Some(validated.token),
+        artifacts: Some(token),
     })
 }
 
 pub async fn validate_bearer_token(
     headers: &HeaderMap,
     scopes: Vec<AuthScope>,
-    verify_audience: Option<String>,
+    verify_options: Option<VerificationOptions>,
 ) -> Result<ValidatedBearer, AuthError> {
-    use jwt_simple::prelude::*;
-    use std::env;
-
-    let token = bearer_token_from_req(headers).ok_or(AuthError::AccessDenied)?;
-    // Load key from env
-    let private_key_hex = env::var("PDS_JWT_KEY_K256_PRIVATE_KEY_HEX").map_err(|_| AuthError::InternalServerError)?;
-    let private_key_bytes = hex::decode(private_key_hex).map_err(|_| AuthError::InternalServerError)?;
-    let key_pair = ES256KKeyPair::from_bytes(&private_key_bytes).map_err(|_| AuthError::InternalServerError)?;
-
-    // Verify JWT
-    let claims = key_pair
-        .public_key()
-        .verify_token::<JwtClaims<serde_json::Value>>(&token, None)
-        .map_err(|_| AuthError::BadJwt)?;
-
-    // Extract custom claims (assume scope, sub, aud, etc. are present)
-    let scope_str = claims.custom.get("scope").and_then(|v| v.as_str()).ok_or(AuthError::BadJwt)?;
-    let scope = AuthScope::from_str(scope_str).map_err(|_| AuthError::InvalidScope)?;
-    let sub = claims.subject.clone().ok_or(AuthError::BadJwt)?;
-    let aud = claims.audiences.clone();
-    let exp = claims.expires_at;
-    let iat = claims.issued_at;
-    let jti = claims.jwt_id.clone();
-
-    // Audience check
-    if let (Some(expected_aud), Some(audiences)) = (verify_audience, &aud) {
-        let aud_str = match audiences {
-            Audiences::AsString(aud_str) => aud_str,
-            Audiences::AsArray(arr) => arr.get(0).ok_or(AuthError::BadJwt)?,
-        };
-        if aud_str != &expected_aud {
-            return Err(AuthError::BadJwtAudience);
+    let token = bearer_token_from_req(headers)?;
+    if let Some(token) = token {
+        let secp = Secp256k1::new();
+        let private_key = env::var("PDS_JWT_KEY_K256_PRIVATE_KEY_HEX").unwrap();
+        let secret_key =
+            SecretKey::from_slice(&hex::decode(private_key.as_bytes()).unwrap()).unwrap();
+        let jwt_key = Keypair::from_secret_key(&secp, &secret_key);
+        let payload = verify_jwt(token.clone(), jwt_key, verify_options).await?;
+        let JwtPayload {
+            sub, aud, scope, ..
+        } = payload.clone();
+        let sub = sub.ok_or(AuthError::BadJwt)?;
+        let aud = aud.ok_or(AuthError::BadJwtAudience)?;
+        if !sub.starts_with("did:") {
+            bail!("Malformed token")
         }
+        if let Audiences::AsString(aud) = aud {
+            if !aud.starts_with("did:") {
+                bail!("Malformed token")
+            }
+            if !scopes.is_empty() && !scopes.contains(&scope) {
+                bail!("Bad token scope")
+            }
+            Ok(ValidatedBearer {
+                did: sub,
+                scope,
+                audience: Some(aud),
+                token,
+                payload,
+            })
+        } else {
+            bail!("Malformed token")
+        }
+    } else {
+        bail!("AuthMissing")
     }
-
-    // Scope check
-    if !scopes.is_empty() && !scopes.contains(&scope) {
-        return Err(AuthError::InvalidScope);
-    }
-
-    // Subject format check
-    if !sub.starts_with("did:") {
-        return Err(AuthError::BadJwt);
-    }
-
-    Ok(ValidatedBearer {
-        did: sub,
-        scope,
-        token,
-        payload: JwtPayload {
-            scope,
-            sub: claims.subject,
-            aud: claims.audiences,
-            exp,
-            iat,
-            jti,
-        },
-        audience: aud.and_then(|a| match a {
-            Audiences::AsString(s) => Some(s),
-            Audiences::AsArray(arr) => arr.get(0).cloned(),
-        }),
-    })
 }
 
 pub async fn validate_access_token(
     headers: &HeaderMap,
     scopes: Vec<AuthScope>,
     opts: Option<ValidateAccessTokenOpts>,
+    account_manager: &AccountManager,
 ) -> Result<AccessOutput, AuthError> {
-    use std::env;
-    let audience = env::var("PDS_SERVICE_DID").map_err(|_| AuthError::InternalServerError)?;
-    let validated = validate_bearer_token(headers, scopes, Some(audience.clone())).await?;
-
-    // TODO: AccountManager logic for takedown/deactivated checks
+    let mut options = VerificationOptions::default();
+    options.allowed_audiences = Some(HashSet::from_strings(&[
+        env::var("PDS_SERVICE_DID").unwrap()
+    ]));
+    let ValidatedBearer {
+        did,
+        scope,
+        token,
+        audience,
+        ..
+    } = validate_bearer_token(headers, scopes, Some(options)).await?;
     let ValidateAccessTokenOpts {
         check_takedown,
         check_deactivated,
-    } = opts.unwrap_or(ValidateAccessTokenOpts {
+    } = opts.unwrap_or_else(|| ValidateAccessTokenOpts {
         check_takedown: Some(false),
         check_deactivated: Some(false),
     });
-    let _check_takedown = check_takedown.unwrap_or(false);
-    let _check_deactivated = check_deactivated.unwrap_or(false);
+    let check_takedown = check_takedown.unwrap_or(false);
+    let check_deactivated = check_deactivated.unwrap_or(false);
 
-    // TODO: If _check_takedown or _check_deactivated, check account status via account manager
-
+    if check_takedown || check_deactivated {
+        let found: ActorAccount = match account_manager
+            .get_account(
+                &did,
+                Some(AvailabilityFlags {
+                    include_deactivated: Some(true),
+                    include_taken_down: Some(true),
+                }),
+            )
+            .await
+        {
+            Ok(Some(found)) => found,
+            _ => return Err(AuthError::AccountNotFound),
+        };
+        if check_takedown && found.takedown_ref.is_some() {
+            return Err(AuthError::AccountTakedown);
+        }
+        if check_deactivated && found.deactivated_at.is_some() {
+            return Err(AuthError::AccountDeactivated);
+        }
+    }
     Ok(AccessOutput {
         credentials: Some(Credentials {
             r#type: "access".to_string(),
-            did: Some(validated.did),
-            scope: Some(validated.scope),
-            audience: validated.audience.clone(),
-            token_id: validated.payload.jti.clone(),
-            aud: validated.payload.aud.as_ref().map(|a| format!("{:?}", a)),
+            did: Some(did),
+            scope: Some(scope),
+            audience,
+            token_id: None,
+            aud: None,
             iss: None,
             is_privileged: None,
         }),
-        artifacts: Some(validated.token),
+        artifacts: Some(token),
     })
 }
 
 pub async fn verify_service_jwt(
     headers: &HeaderMap,
     opts: ServiceJwtOpts,
+    // You may need to pass additional state here if needed for DID resolution
 ) -> Result<VerifiedServiceJwt, AuthError> {
-    // TODO: Implement key resolver logic for service JWTs
-    let token = bearer_token_from_req(headers).ok_or(AuthError::AccessDenied)?;
+    let get_signing_key = |iss: String, force_refresh: bool| -> Result<String> {
+        match &opts.iss {
+            Some(opts_iss) if opts_iss.contains(&iss) => bail!("UntrustedIss: Untrusted issuer"),
+            _ => (),
+        }
+        // You will need to implement DID resolution logic here, using your app's state if needed.
+        bail!("DID resolution not implemented in Axum context")
+    };
 
-    // In a real implementation, resolve the key using opts.iss and verify the JWT
-    // For now, just parse the JWT and extract aud/iss
-    use jwt_simple::prelude::*;
-    let dummy_key = ES256KKeyPair::generate();
-    let claims = dummy_key
-        .public_key()
-        .verify_token::<JwtClaims<serde_json::Value>>(&token, None)
-        .map_err(|_| AuthError::BadJwt)?;
-
-    let aud = claims.audiences.as_ref().and_then(|a| match a {
-        Audiences::AsString(s) => Some(s.clone()),
-        Audiences::AsArray(arr) => arr.get(0).cloned(),
-    }).unwrap_or_else(|| "audience".to_string());
-
-    let iss = claims.issuer.unwrap_or_else(|| "issuer".to_string());
-
-    Ok(VerifiedServiceJwt {
-        aud,
-        iss,
-    })
+    match bearer_token_from_req(headers)? {
+        None => bail!("MissingJwt: missing jwt"),
+        Some(jwt_str) => {
+            // You will need to implement or adapt verify_service_jwt_server for Axum/state
+            // let payload: ServiceJwtPayload =
+            //     verify_service_jwt_server(jwt_str, opts.aud, get_signing_key).await?;
+            // Ok(VerifiedServiceJwt {
+            //     iss: payload.iss,
+            //     aud: payload.aud,
+            // })
+            bail!("verify_service_jwt_server not implemented in Axum context")
+        }
+    }
 }
 
 pub async fn verify_jwt(
     jwt: String,
-    jwt_key: ES256KKeyPair,
-    // _verify_options: Option<VerificationOptions>,
+    jwt_key: Keypair,
+    verify_options: Option<VerificationOptions>,
 ) -> Result<JwtPayload, AuthError> {
-    use jwt_simple::prelude::*;
-    let claims = jwt_key
-        .public_key()
-        .verify_token::<JwtClaims<serde_json::Value>>(&jwt, None)
-        .map_err(|_| AuthError::BadJwt)?;
-
-    let scope_str = claims.custom.get("scope").and_then(|v| v.as_str()).ok_or(AuthError::BadJwt)?;
-    let scope = AuthScope::from_str(scope_str).map_err(|_| AuthError::InvalidScope)?;
+    let key = ES256kKeyPair::from_bytes(jwt_key.secret_bytes().as_slice())?;
+    let public_key = key.public_key();
+    let claims = public_key.verify_token::<CustomClaimObj>(&jwt, verify_options)?;
 
     Ok(JwtPayload {
-        scope,
+        scope: AuthScope::from_str(&claims.custom.scope)?,
         sub: claims.subject,
         aud: claims.audiences,
         exp: claims.expires_at,
@@ -212,3 +212,5 @@ pub async fn verify_jwt(
         jti: claims.jwt_id,
     })
 }
+
+// You may need to define or import CustomClaimObj and ServiceJwtPayload for your context.

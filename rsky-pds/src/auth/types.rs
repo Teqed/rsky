@@ -1,8 +1,22 @@
-use serde::{Deserialize, Serialize};
-use std::fmt;
 use crate::auth::auth_scope::AuthScope;
 use jwt_simple::claims::Audiences;
+use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::time::Duration;
+use std::vec::Vec;
+
+#[derive(Clone, Debug)]
+pub struct ServiceJwtOpts {
+    pub aud: Option<String>,
+    pub iss: Option<Vec<String>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ValidateAccessTokenOpts {
+    pub check_takedown: Option<bool>,
+    pub check_deactivated: Option<bool>,
+}
 
 /// Credentials for authentication, including type, DID, scope, and other metadata.
 #[derive(Clone, Debug)]
@@ -59,7 +73,11 @@ pub struct VerifiedServiceJwt {
 
 impl fmt::Display for VerifiedServiceJwt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "VerifiedServiceJwt {{ aud: {}, iss: {} }}", self.aud, self.iss)
+        write!(
+            f,
+            "VerifiedServiceJwt {{ aud: {}, iss: {} }}",
+            self.aud, self.iss
+        )
     }
 }
 

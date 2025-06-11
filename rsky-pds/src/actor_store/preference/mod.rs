@@ -1,5 +1,5 @@
 use crate::actor_store::preference::util::pref_in_scope;
-use crate::auth_verifier::AuthScope;
+use crate::auth::auth_scope::AuthScope;
 use crate::models::models::actor_store::AccountPref;
 use anyhow::{bail, Result};
 use diesel::*;

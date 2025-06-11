@@ -1,4 +1,4 @@
-use crate::auth_verifier::AuthScope;
+use crate::auth::auth_scope::AuthScope;
 
 const FULL_ACCESS_ONLY_PREFS: [&str; 1] = ["app.bsky.actor.defs#personalDetailsPref"];
 

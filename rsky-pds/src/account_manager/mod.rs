@@ -10,7 +10,7 @@ use crate::account_manager::helpers::token::FindByQbOpts;
 use crate::account_manager::helpers::{authorization_request, device_account, repo};
 use crate::account_manager::helpers::{token, used_refresh_token};
 use crate::actor_store::ActorStorage;
-use crate::auth_verifier_rocket::AuthScope;
+use crate::auth::auth_scope::AuthScope;
 use crate::models::models::pds::EmailTokenPurpose;
 use anyhow::{bail, Result};
 use chrono::offset::Utc as UtcOffset;
