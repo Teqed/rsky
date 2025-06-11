@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 pub mod detailed_account_store;
 pub mod models;
 pub mod provider;
-pub mod routes;
+// pub mod routes;
 
 pub struct SharedOAuthProvider {
     pub oauth_provider: Arc<RwLock<OAuthProviderCreator>>,

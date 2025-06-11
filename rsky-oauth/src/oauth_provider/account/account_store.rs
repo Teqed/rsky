@@ -37,28 +37,28 @@ pub struct AccountInfo {
     pub info: DeviceAccountInfo,
 }
 
-pub trait AccountStore: Send + Sync {
+pub trait AccountStore: Send {
     fn authenticate_account(
         &self,
         credentials: SignInCredentials,
         device_id: DeviceId,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + '_>>;
     fn add_authorized_client(
         &self,
         device_id: DeviceId,
         sub: Sub,
         client_id: OAuthClientId,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>>;
     fn get_device_account(
         &self,
         device_id: DeviceId,
         sub: Sub,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + '_>>;
     fn remove_device_account(
         &self,
         device_id: DeviceId,
         sub: Sub,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>>;
     /**
      * @note Only the accounts that where logged in with `remember: true` need to
      * be returned. The others will be ignored.
@@ -66,5 +66,5 @@ pub trait AccountStore: Send + Sync {
     fn list_device_accounts(
         &self,
         device_id: DeviceId,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<AccountInfo>, OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<AccountInfo>, OAuthError>> + Send + '_>>;
 }

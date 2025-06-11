@@ -645,14 +645,14 @@ mod tests {
             &mut self,
             id: RequestId,
             data: RequestData,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             Box::pin(async move { return Ok(()) })
         }
 
         fn read_request(
             &self,
             id: &RequestId,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<RequestData>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<RequestData>, OAuthError>> + Send + '_>>
         {
             unimplemented!()
         }
@@ -661,21 +661,21 @@ mod tests {
             &mut self,
             id: RequestId,
             data: UpdateRequestData,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
 
         fn delete_request(
             &mut self,
             id: RequestId,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
 
         fn find_request_by_code(
             &self,
             code: Code,
-        ) -> Pin<Box<dyn Future<Output = Option<FoundRequestResult>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Option<FoundRequestResult>> + Send + '_>> {
             unimplemented!()
         }
     }

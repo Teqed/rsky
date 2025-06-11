@@ -4,6 +4,7 @@ use diesel::*;
 use dotenvy::dotenv;
 use std::env;
 
+pub type DbPool = Pool;
 pub type DbConn = deadpool_diesel::Pool<
     deadpool_diesel::Manager<SqliteConnection>,
     deadpool_diesel::sqlite::Object,
@@ -12,7 +13,7 @@ pub type DbConn = deadpool_diesel::Pool<
 #[tracing::instrument(skip_all)]
 /// Establish a connection to the database
 /// Takes a database URL as an argument (like "sqlite://data/sqlite.db")
-pub(crate) fn establish_pool(database_url: &str) -> Result<Pool> {
+pub fn establish_pool(database_url: &str) -> Result<Pool> {
     tracing::debug!("Establishing database connection");
     let manager = Manager::new(database_url, Runtime::Tokio1);
     let pool = Pool::builder(manager)

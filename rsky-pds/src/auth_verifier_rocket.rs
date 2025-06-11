@@ -2,15 +2,12 @@ use crate::account_manager::helpers::account::{ActorAccount, AvailabilityFlags};
 use crate::account_manager::helpers::auth::CustomClaimObj;
 use crate::account_manager::AccountManager;
 use crate::apis::ApiError;
-use crate::oauth::{SharedOAuthProvider, SharedReplayStore};
 use crate::xrpc_server::auth::{verify_jwt as verify_service_jwt_server, ServiceJwtPayload};
 use crate::SharedIdResolver;
 use anyhow::{bail, Result};
 use base64::{engine::general_purpose::STANDARD as base64pad, Engine as _};
-use diesel::row::NamedRow;
 use jwt_simple::claims::Audiences;
 use jwt_simple::prelude::*;
-use rocket::form::validate::Contains;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::State;
@@ -18,13 +15,10 @@ use rsky_common::env::env_str;
 use rsky_common::get_verification_material;
 use rsky_identity::did::atproto_data::get_did_key_from_multibase;
 use rsky_identity::types::DidDocument;
-use rsky_oauth::oauth_provider::token::verify_token_claims::VerifyTokenClaimsOptions;
 use secp256k1::{Keypair, Secp256k1, SecretKey};
 use std::env;
 use std::str;
-use std::sync::Arc;
 use thiserror::Error;
-use tokio::sync::RwLock;
 
 const INFINITY: u64 = u64::MAX;
 
@@ -35,14 +29,6 @@ pub enum AuthScope {
     AppPass,
     AppPassPrivileged,
     SignupQueued,
-    Takendown,
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub enum AuthType {
-    BASIC,
-    BEARER,
-    DPOP,
 }
 
 impl AuthScope {
@@ -53,7 +39,6 @@ impl AuthScope {
             AuthScope::AppPass => "com.atproto.appPass",
             AuthScope::AppPassPrivileged => "com.atproto.appPassPrivileged",
             AuthScope::SignupQueued => "com.atproto.signupQueued",
-            AuthScope::Takendown => "com.atproto.takendown",
         }
     }
 
@@ -64,7 +49,6 @@ impl AuthScope {
             "com.atproto.appPass" => Ok(AuthScope::AppPass),
             "com.atproto.appPassPrivileged" => Ok(AuthScope::AppPassPrivileged),
             "com.atproto.signupQueued" => Ok(AuthScope::SignupQueued),
-            "com.atproto.takendown" => Ok(AuthScope::Takendown),
             _ => bail!("Invalid AuthScope: `{scope:?}` is not a valid auth scope"),
         }
     }
@@ -90,7 +74,7 @@ pub struct Credentials {
 
 #[derive(Clone)]
 pub struct AccessOutput {
-    pub credentials: Credentials,
+    pub credentials: Option<Credentials>,
     pub artifacts: Option<String>,
 }
 
@@ -200,7 +184,7 @@ impl<'r> FromRequest<'r> for Refresh {
         };
         Outcome::Success(Refresh {
             access: AccessOutput {
-                credentials: Credentials {
+                credentials: Some(Credentials {
                     r#type: "refresh".to_string(),
                     did: Some(did),
                     scope: Some(scope),
@@ -209,7 +193,7 @@ impl<'r> FromRequest<'r> for Refresh {
                     aud: None,
                     iss: None,
                     is_privileged: None,
-                },
+                }),
                 artifacts: Some(token),
             },
         })
@@ -487,7 +471,7 @@ impl<'r> FromRequest<'r> for UserDidAuth {
         {
             Ok(payload) => Outcome::Success(UserDidAuth {
                 access: AccessOutput {
-                    credentials: Credentials {
+                    credentials: Some(Credentials {
                         r#type: "user_did".to_string(),
                         did: None,
                         scope: None,
@@ -496,7 +480,7 @@ impl<'r> FromRequest<'r> for UserDidAuth {
                         aud: Some(payload.aud),
                         iss: Some(payload.iss),
                         is_privileged: None,
-                    },
+                    }),
                     artifacts: None,
                 },
             }),
@@ -575,7 +559,7 @@ impl<'r> FromRequest<'r> for ModService {
                 }
                 Ok(payload) => Outcome::Success(ModService {
                     access: AccessOutput {
-                        credentials: Credentials {
+                        credentials: Some(Credentials {
                             r#type: "mod_service".to_string(),
                             did: None,
                             scope: None,
@@ -584,7 +568,7 @@ impl<'r> FromRequest<'r> for ModService {
                             aud: Some(payload.aud),
                             iss: Some(payload.iss),
                             is_privileged: None,
-                        },
+                        }),
                         artifacts: None,
                     },
                 }),
@@ -662,7 +646,7 @@ impl<'r> FromRequest<'r> for AdminToken {
                 } else {
                     Outcome::Success(AdminToken {
                         access: AccessOutput {
-                            credentials: Credentials {
+                            credentials: Some(Credentials {
                                 r#type: "admin_token".to_string(),
                                 did: None,
                                 scope: None,
@@ -671,7 +655,7 @@ impl<'r> FromRequest<'r> for AdminToken {
                                 aud: None,
                                 iss: None,
                                 is_privileged: None,
-                            },
+                            }),
                             artifacts: None,
                         },
                     })
@@ -736,7 +720,7 @@ pub async fn validate_bearer_access_token<'r>(
     } = validate_bearer_token(request, scopes, Some(options)).await?;
     let is_privileged = vec![AuthScope::Access, AuthScope::AppPassPrivileged].contains(&scope);
     Ok(AccessOutput {
-        credentials: Credentials {
+        credentials: Some(Credentials {
             r#type: "access".to_string(),
             did: Some(did),
             scope: Some(scope),
@@ -745,7 +729,7 @@ pub async fn validate_bearer_access_token<'r>(
             aud: None,
             iss: None,
             is_privileged: Some(is_privileged),
-        },
+        }),
         artifacts: Some(token),
     })
 }
@@ -797,197 +781,23 @@ pub async fn validate_bearer_token<'r>(
     }
 }
 
-#[tracing::instrument(skip_all)]
-pub async fn validate_dpop_access_token<'r>(
-    request: &'r Request<'_>,
-    scopes: Vec<AuthScope>,
-) -> Result<AccessOutput> {
-    let shared_oauth_provider = match request.rocket().state::<SharedOAuthProvider>() {
-        None => {
-            tracing::error!("Error getting oauth provider");
-            return Err(anyhow::Error::new(AuthError::InternalServerError(
-                "Unexpected Error Occurred".to_string(),
-            )));
-        }
-        Some(shared_oauth_provider) => shared_oauth_provider,
-    };
-    let creator = shared_oauth_provider.oauth_provider.read().await;
-
-    let account_manager = match request
-        .guard::<AccountManager>()
-        .await
-        .map(|account_manager| account_manager)
-    {
-        Outcome::Success(account_manager) => account_manager,
-        _ => {
-            tracing::error!("Error getting account_manager");
-            return Err(anyhow::Error::new(AuthError::InternalServerError(
-                "Unexpected Error Occurred".to_string(),
-            )));
-        }
-    };
-    let account_manager = Arc::new(RwLock::new(account_manager));
-
-    let shared_replay_store = match request.rocket().state::<SharedReplayStore>() {
-        None => {
-            tracing::error!("Error getting replay_store");
-            return Err(anyhow::Error::new(AuthError::InternalServerError(
-                "Unexpected Error Occurred".to_string(),
-            )));
-        }
-        Some(shared_oauth_provider) => shared_oauth_provider,
-    };
-
-    let mut oauth_provider = creator(
-        account_manager.clone(),
-        Some(account_manager.clone()),
-        account_manager.clone(),
-        account_manager.clone(),
-        Some(account_manager.clone()),
-        Some(shared_replay_store.replay_store.clone()),
-    );
-
-    let mut oauth_verifier = oauth_provider.oauth_verifier;
-
-    let url = request.uri().to_string();
-    let header_map = request.headers();
-    let options = VerifyTokenClaimsOptions {
-        audience: Some(vec![env::var("PDS_SERVICE_DID")?]),
-        scope: None,
-    };
-    let authorization = header_map.get_one("authorization");
-    let dpop = header_map.get_one("dpop");
-    let result = oauth_verifier
-        .authenticate_request(
-            request.method().as_str().to_string(),
-            url,
-            (authorization, dpop),
-            Some(options),
-        )
-        .await
-        .unwrap();
-
-    let claims = result.claims;
-    let sub = match claims.sub {
-        None => {
-            return return Err(anyhow::Error::new(AuthError::InternalServerError(
-                "Unexpected Error Occurred".to_string(),
-            )))
-        }
-        Some(sub) => {
-            if !sub.get().starts_with("did:") {
-                return return Err(anyhow::Error::new(AuthError::InternalServerError(
-                    "Unexpected Error Occurred".to_string(),
-                )));
-            }
-            sub
-        }
-    };
-
-    let token_scopes = match claims.scope {
-        None => {
-            return return Err(anyhow::Error::new(AuthError::InternalServerError(
-                "Unexpected Error Occurred".to_string(),
-            )))
-        }
-        Some(scope) => {
-            let mut res = HashSet::new();
-            res.insert(scope.into_inner());
-            res
-        }
-    };
-    if !token_scopes.contains("transition:generic") {
-        return Err(anyhow::Error::new(AuthError::InternalServerError(
-            "Missing required scope: transition:generic".to_string(),
-        )));
-    }
-
-    let scope_equivalent = match token_scopes.contains("transition:chat.bsky") {
-        true => AuthScope::AppPassPrivileged,
-        false => AuthScope::AppPass,
-    };
-
-    if !scopes.contains(&scope_equivalent) {
-        // AppPassPrivileged is sufficient but was not provided "transition:chat.bsky"
-        if scopes.contains(AuthScope::AppPassPrivileged) {
-            return Err(anyhow::Error::new(AuthError::InternalServerError(
-                "Missing required scope: transition:chat.bsky".to_string(),
-            )));
-        }
-
-        // AuthScope.Access and AuthScope.SignupQueued do not have an OAuth
-        // scope equivalent.
-        return Err(anyhow::Error::new(AuthError::InternalServerError(
-            "DPoP access token cannot be used for this request".to_string(),
-        )));
-    }
-
-    let is_privileged =
-        [AuthScope::Access, AuthScope::AppPassPrivileged].contains(&scope_equivalent);
-
-    let credentials = Credentials {
-        r#type: "access".to_string(),
-        did: Some(sub.get()),
-        scope: Some(scope_equivalent),
-        audience: None,
-        token_id: None,
-        aud: Some(env::var("PDS_SERVICE_DID")?),
-        iss: None,
-        is_privileged: Some(is_privileged),
-    };
-    let artifacts = result.token.into_inner();
-    Ok(AccessOutput {
-        credentials,
-        artifacts: Some(artifacts),
-    })
-}
-
-async fn validate_access_token<'r>(
+// @TODO: Implement DPop/OAuth
+pub async fn validate_access_token<'r>(
     request: &'r Request<'_>,
     scopes: Vec<AuthScope>,
     opts: Option<ValidateAccessTokenOpts>,
 ) -> Result<AccessOutput> {
     let mut options = VerificationOptions::default();
-    options.allowed_audiences = Some(HashSet::from_strings(&[env::var("PDS_SERVICE_DID")?]));
-
-    let access_output = match request.headers().get_one("authorization") {
-        Some(header) => {
-            if header.starts_with("Bearer ") {
-                let ValidatedBearer {
-                    did,
-                    scope,
-                    token,
-                    audience,
-                    ..
-                } = validate_bearer_token(request, scopes, Some(options)).await?;
-                AccessOutput {
-                    credentials: Credentials {
-                        r#type: "access".to_string(),
-                        did: Some(did),
-                        scope: Some(scope),
-                        audience,
-                        token_id: None,
-                        aud: None,
-                        iss: None,
-                        is_privileged: None,
-                    },
-                    artifacts: Some(token),
-                }
-            } else if header.starts_with("DPoP ") {
-                validate_dpop_access_token(request, scopes).await?
-            } else {
-                return Err(anyhow::Error::new(AuthError::AuthRequired(
-                    "Unexpected authorization type".to_string(),
-                )));
-            }
-        }
-        None => {
-            return Err(anyhow::Error::new(AuthError::AuthRequired(
-                "AuthMissing".to_string(),
-            )));
-        }
-    };
-
+    options.allowed_audiences = Some(HashSet::from_strings(&[
+        env::var("PDS_SERVICE_DID").unwrap()
+    ]));
+    let ValidatedBearer {
+        did,
+        scope,
+        token,
+        audience,
+        ..
+    } = validate_bearer_token(request, scopes, Some(options)).await?;
     let ValidateAccessTokenOpts {
         check_takedown,
         check_deactivated,
@@ -995,7 +805,6 @@ async fn validate_access_token<'r>(
         check_takedown: Some(false),
         check_deactivated: Some(false),
     });
-
     let check_takedown = check_takedown.unwrap_or(false);
     let check_deactivated = check_deactivated.unwrap_or(false);
 
@@ -1019,7 +828,7 @@ async fn validate_access_token<'r>(
     if check_takedown || check_deactivated {
         let found: ActorAccount = match account_manager
             .get_account(
-                &access_output.credentials.did.clone().unwrap(),
+                &did,
                 Some(AvailabilityFlags {
                     include_deactivated: Some(true),
                     include_taken_down: Some(true),
@@ -1045,7 +854,19 @@ async fn validate_access_token<'r>(
             )));
         }
     }
-    Ok(access_output)
+    Ok(AccessOutput {
+        credentials: Some(Credentials {
+            r#type: "access".to_string(),
+            did: Some(did),
+            scope: Some(scope),
+            audience,
+            token_id: None,
+            aud: None,
+            iss: None,
+            is_privileged: None,
+        }),
+        artifacts: Some(token),
+    })
 }
 
 pub async fn verify_service_jwt<'r>(
@@ -1099,10 +920,10 @@ pub async fn verify_service_jwt<'r>(
 }
 
 pub fn is_user_or_admin(auth: AccessOutput, did: &String) -> bool {
-    if auth.credentials.did == Some("admin_token".to_string()) {
-        true
-    } else {
-        auth.credentials.did == Some(did.to_string())
+    match auth.credentials {
+        Some(credentials) if credentials.did == Some("admin_token".to_string()) => true,
+        Some(credentials) => credentials.did == Some(did.to_string()),
+        None => false,
     }
 }
 
@@ -1155,8 +976,6 @@ pub async fn verify_jwt(
         jti: claims.jwt_id,
     })
 }
-
-pub fn parse_authorization_header() {}
 
 pub fn parse_basic_auth(token: &str) -> Option<BasicAuth> {
     if !token.starts_with(BASIC) {

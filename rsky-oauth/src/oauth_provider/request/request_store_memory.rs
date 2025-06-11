@@ -32,7 +32,7 @@ impl RequestStore for RequestStoreMemory {
         &mut self,
         id: RequestId,
         data: RequestData,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
         Box::pin(async move {
             self.requests.insert(id, data);
             Ok(())
@@ -42,8 +42,7 @@ impl RequestStore for RequestStoreMemory {
     fn read_request(
         &self,
         id: &RequestId,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<RequestData>, OAuthError>> + Send + Sync + '_>>
-    {
+    ) -> Pin<Box<dyn Future<Output = Result<Option<RequestData>, OAuthError>> + Send + '_>> {
         let id = id.clone();
         Box::pin(async move {
             match self.requests.get(&id) {
@@ -57,7 +56,7 @@ impl RequestStore for RequestStoreMemory {
         &mut self,
         id: RequestId,
         data: UpdateRequestData,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
         let data = data;
         Box::pin(async move {
             let current = match self.requests.get(&id) {
@@ -93,7 +92,7 @@ impl RequestStore for RequestStoreMemory {
     fn delete_request(
         &mut self,
         id: RequestId,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
         Box::pin(async move {
             self.requests.remove(&id);
             Ok(())
@@ -103,7 +102,7 @@ impl RequestStore for RequestStoreMemory {
     fn find_request_by_code(
         &self,
         code: Code,
-    ) -> Pin<Box<dyn Future<Output = Option<FoundRequestResult>> + Send + Sync + '_>> {
+    ) -> Pin<Box<dyn Future<Output = Option<FoundRequestResult>> + Send + '_>> {
         Box::pin(async move {
             for (id, data) in &self.requests {
                 if let Some(found_code) = &data.code {

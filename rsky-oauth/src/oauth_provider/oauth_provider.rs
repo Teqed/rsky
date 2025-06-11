@@ -313,8 +313,7 @@ pub type OAuthProviderCreator = Box<
             Option<Arc<RwLock<dyn ClientStore>>>,
             Option<Arc<RwLock<dyn ReplayStore>>>,
         ) -> OAuthProvider
-        + Send
-        + Sync,
+        + Send,
 >;
 
 pub struct OAuthProviderCreatorOptions {
@@ -1328,7 +1327,7 @@ mod tests {
             &self,
             credentials: SignInCredentials,
             device_id: DeviceId,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + '_>>
         {
             let credentials = credentials;
             let device_id = device_id;
@@ -1357,7 +1356,7 @@ mod tests {
             device_id: DeviceId,
             sub: Sub,
             client_id: OAuthClientId,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
 
@@ -1365,7 +1364,7 @@ mod tests {
             &self,
             device_id: DeviceId,
             sub: Sub,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + '_>>
         {
             Box::pin(async move {
                 if device_id == DeviceId::new("dev-64976a0a962c4b7521abd679989c44a1").unwrap()
@@ -1397,14 +1396,14 @@ mod tests {
             &self,
             device_id: DeviceId,
             sub: Sub,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
 
         fn list_device_accounts(
             &self,
             device_id: DeviceId,
-        ) -> Pin<Box<dyn Future<Output = Result<Vec<AccountInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Vec<AccountInfo>, OAuthError>> + Send + '_>>
         {
             Box::pin(async move {
                 if device_id == DeviceId::new("dev-64976a0a962c4b7521abd679789c44a3").unwrap() {
@@ -1444,14 +1443,14 @@ mod tests {
             &mut self,
             device_id: DeviceId,
             data: DeviceData,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
 
         fn read_device(
             &self,
             device_id: DeviceId,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<DeviceData>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<DeviceData>, OAuthError>> + Send + '_>>
         {
             unimplemented!()
         }
@@ -1460,14 +1459,14 @@ mod tests {
             &mut self,
             device_id: DeviceId,
             data: PartialDeviceData,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
 
         fn delete_device(
             &mut self,
             device_id: DeviceId,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
     }
@@ -1478,14 +1477,14 @@ mod tests {
             token_id: TokenId,
             data: TokenData,
             refresh_token: Option<RefreshToken>,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
 
         fn read_token(
             &self,
             token_id: TokenId,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + '_>>
         {
             unimplemented!()
         }
@@ -1493,7 +1492,7 @@ mod tests {
         fn delete_token(
             &mut self,
             token_id: TokenId,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             Box::pin(async move {
                 if token_id
                     == TokenId::new(
@@ -1514,14 +1513,14 @@ mod tests {
             new_token_id: TokenId,
             new_refresh_token: RefreshToken,
             new_data: NewTokenData,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
 
         fn find_token_by_refresh_token(
             &self,
             refresh_token: RefreshToken,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + '_>>
         {
             let refresh_token = refresh_token;
             Box::pin(async move {
@@ -1594,7 +1593,7 @@ mod tests {
         fn find_token_by_code(
             &self,
             code: Code,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + '_>>
         {
             unimplemented!()
         }
@@ -1605,7 +1604,7 @@ mod tests {
             &mut self,
             id: RequestId,
             data: RequestData,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             Box::pin(async move {
                 //TODO
                 Ok(())
@@ -1615,7 +1614,7 @@ mod tests {
         fn read_request(
             &self,
             id: &RequestId,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<RequestData>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<RequestData>, OAuthError>> + Send + '_>>
         {
             let id = id.clone();
             Box::pin(async move {
@@ -1703,7 +1702,7 @@ mod tests {
             &mut self,
             id: RequestId,
             data: UpdateRequestData,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             let id = id;
             Box::pin(async move {
                 if id == RequestId::new("req-f46e8a935aa5343574848e8a3c260fae").unwrap() {
@@ -1719,7 +1718,7 @@ mod tests {
         fn delete_request(
             &mut self,
             id: RequestId,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             let id = id;
             Box::pin(async move {
                 if id == RequestId::new("req-f46e8a935aa5343574848e8a3c260fae").unwrap() {
@@ -1735,7 +1734,7 @@ mod tests {
         fn find_request_by_code(
             &self,
             code: Code,
-        ) -> Pin<Box<dyn Future<Output = Option<FoundRequestResult>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Option<FoundRequestResult>> + Send + '_>> {
             Box::pin(async move {
                 if code
                     == Code::new(

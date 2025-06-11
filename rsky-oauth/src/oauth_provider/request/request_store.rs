@@ -26,12 +26,12 @@ pub struct FoundRequestResult {
     pub data: RequestData,
 }
 
-pub trait RequestStore: Send + Sync {
+pub trait RequestStore: Send {
     fn create_request(
         &mut self,
         id: RequestId,
         data: RequestData,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>>;
     /**
      * Note that expired requests **can** be returned to yield a different error
      * message than if the request was not found.
@@ -39,18 +39,18 @@ pub trait RequestStore: Send + Sync {
     fn read_request(
         &self,
         id: &RequestId,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<RequestData>, OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Option<RequestData>, OAuthError>> + Send + '_>>;
     fn update_request(
         &mut self,
         id: RequestId,
         data: UpdateRequestData,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>>;
     fn delete_request(
         &mut self,
         id: RequestId,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>>;
     fn find_request_by_code(
         &self,
         code: Code,
-    ) -> Pin<Box<dyn Future<Output = Option<FoundRequestResult>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Option<FoundRequestResult>> + Send + '_>>;
 }

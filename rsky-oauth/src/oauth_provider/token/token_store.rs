@@ -25,28 +25,28 @@ pub struct NewTokenData {
     pub updated_at: DateTime<Utc>,
 }
 
-pub trait TokenStore: Send + Sync {
+pub trait TokenStore: Send {
     fn create_token(
         &mut self,
         token_id: TokenId,
         data: TokenData,
         refresh_token: Option<RefreshToken>,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>>;
     fn read_token(
         &self,
         token_id: TokenId,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + '_>>;
     fn delete_token(
         &mut self,
         token_id: TokenId,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>>;
     fn rotate_token(
         &mut self,
         token_id: TokenId,
         new_token_id: TokenId,
         new_refresh_token: RefreshToken,
         new_data: NewTokenData,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>>;
     /**
      * Find a token by its refresh token. Note that previous refresh tokens
      * should also return the token. The data model is responsible for storing
@@ -55,9 +55,9 @@ pub trait TokenStore: Send + Sync {
     fn find_token_by_refresh_token(
         &self,
         refresh_token: RefreshToken,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + '_>>;
     fn find_token_by_code(
         &self,
         code: Code,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + '_>>;
 }

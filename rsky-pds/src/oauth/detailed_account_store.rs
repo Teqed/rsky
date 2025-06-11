@@ -27,9 +27,8 @@ pub struct DetailedAccountStore {
     local_view: LocalViewerCreator,
 }
 
-pub type DetailedAccountStoreCreator = Box<
-    dyn Fn(ActorStore, AccountManager, LocalViewerCreator) -> DetailedAccountStore + Send + Sync,
->;
+pub type DetailedAccountStoreCreator =
+    Box<dyn Fn(ActorStore, AccountManager, LocalViewerCreator) -> DetailedAccountStore + Send>;
 
 impl DetailedAccountStore {
     pub fn creator() -> DetailedAccountStoreCreator {
@@ -84,8 +83,7 @@ impl AccountStore for DetailedAccountStore {
         &self,
         credentials: SignInCredentials,
         device_id: DeviceId,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + Sync + '_>>
-    {
+    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + '_>> {
         Box::pin(async move {
             let result = self
                 .account_manager
@@ -103,7 +101,7 @@ impl AccountStore for DetailedAccountStore {
         device_id: DeviceId,
         sub: Sub,
         client_id: OAuthClientId,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
         Box::pin(async move {
             self.account_manager
                 .add_authorized_client(device_id, sub, client_id)
@@ -115,8 +113,7 @@ impl AccountStore for DetailedAccountStore {
         &self,
         device_id: DeviceId,
         sub: Sub,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + Sync + '_>>
-    {
+    ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + '_>> {
         let device_id = device_id.clone();
         Box::pin(async move {
             let result = self
@@ -134,7 +131,7 @@ impl AccountStore for DetailedAccountStore {
         &self,
         device_id: DeviceId,
         sub: Sub,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
         Box::pin(async move {
             self.account_manager
                 .remove_device_account(device_id, sub)
@@ -145,8 +142,7 @@ impl AccountStore for DetailedAccountStore {
     fn list_device_accounts(
         &self,
         device_id: DeviceId,
-    ) -> Pin<Box<dyn Future<Output = Result<Vec<AccountInfo>, OAuthError>> + Send + Sync + '_>>
-    {
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<AccountInfo>, OAuthError>> + Send + '_>> {
         let device_id = device_id.clone();
         Box::pin(async move {
             let account_infos = self.account_manager.list_device_accounts(device_id).await?;

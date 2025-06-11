@@ -74,8 +74,7 @@ pub type TokenManagerCreator = Box<
             Option<i64>,
             Arc<OAuthHooks>,
         ) -> TokenManager
-        + Send
-        + Sync,
+        + Send,
 >;
 
 impl TokenManager {
@@ -839,14 +838,14 @@ mod tests {
             token_id: TokenId,
             data: TokenData,
             refresh_token: Option<RefreshToken>,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
 
         fn read_token(
             &self,
             token_id: TokenId,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + '_>>
         {
             let token_id = token_id;
             Box::pin(async move {
@@ -920,7 +919,7 @@ mod tests {
         fn delete_token(
             &mut self,
             token_id: TokenId,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             let token_id = token_id;
             Box::pin(async move {
                 if token_id == TokenId::new("tok-7e415d9b2aec8f78d11d2b8c7144b87d").unwrap() {
@@ -937,14 +936,14 @@ mod tests {
             new_token_id: TokenId,
             new_refresh_token: RefreshToken,
             new_data: NewTokenData,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
 
         fn find_token_by_refresh_token(
             &self,
             refresh_token: RefreshToken,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + '_>>
         {
             let refresh_token = refresh_token;
             Box::pin(async move {
@@ -999,7 +998,7 @@ mod tests {
         fn find_token_by_code(
             &self,
             code: Code,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<TokenInfo>, OAuthError>> + Send + '_>>
         {
             unimplemented!()
         }

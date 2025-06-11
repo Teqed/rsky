@@ -13,23 +13,23 @@ pub struct PartialDeviceData {
     pub last_seen_at: Option<i64>,
 }
 
-pub trait DeviceStore: Send + Sync {
+pub trait DeviceStore: Send {
     fn create_device(
         &mut self,
         device_id: DeviceId,
         data: DeviceData,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>>;
     fn read_device(
         &self,
         device_id: DeviceId,
-    ) -> Pin<Box<dyn Future<Output = Result<Option<DeviceData>, OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<Option<DeviceData>, OAuthError>> + Send + '_>>;
     fn update_device(
         &mut self,
         device_id: DeviceId,
         data: PartialDeviceData,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>>;
     fn delete_device(
         &mut self,
         device_id: DeviceId,
-    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>>;
+    ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>>;
 }

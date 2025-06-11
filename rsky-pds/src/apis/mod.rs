@@ -1,85 +1,76 @@
-use crate::auth_verifier::AccessStandard;
+use crate::auth_verifier_rocket::AccessStandard;
 use crate::handle;
 use crate::handle::errors::ErrorKind;
 use crate::pipethrough::{pipethrough_procedure, pipethrough_procedure_post, ProxyRequest};
 use anyhow::{Error, Result};
-use rocket::http::{ContentType, Header, Status};
-use rocket::request::FromParam;
-use rocket::serde::json::Json;
-use rocket::{response, Data, Request, Responder};
+use axum::{
+    body::Body,
+    http::{header, HeaderMap, HeaderValue, StatusCode},
+    response::{IntoResponse, Response},
+    Json,
+};
+use serde::Serialize;
+use std::fmt;
 
-#[derive(Responder)]
-#[response(status = 200)]
-pub struct ProxyResponder(Vec<u8>, Header<'static>, Header<'static>);
+/// Proxy Responder for Axum
+pub struct ProxyResponder {
+    buffer: Vec<u8>,
+    headers: HeaderMap,
+}
+
+impl ProxyResponder {
+    pub fn new(buffer: Vec<u8>, headers: HeaderMap) -> Self {
+        Self { buffer, headers }
+    }
+}
+
+impl IntoResponse for ProxyResponder {
+    fn into_response(self) -> Response {
+        let mut response = Response::builder().status(StatusCode::OK);
+
+        // Add headers from the proxy response
+        let headers = response.headers_mut().unwrap();
+        for (key, value) in self.headers.iter() {
+            if let key_str = key.as_str() {
+                headers.insert(key, value.clone());
+            }
+        }
+
+        // Ensure content-type and content-length are set
+        if !headers.contains_key(header::CONTENT_TYPE) {
+            headers.insert(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("application/octet-stream"),
+            );
+        }
+
+        if !headers.contains_key(header::CONTENT_LENGTH) {
+            headers.insert(
+                header::CONTENT_LENGTH,
+                HeaderValue::from_str(&self.buffer.len().to_string()).unwrap(),
+            );
+        }
+
+        // Build the response with the body
+        response.body(Body::from(self.buffer)).unwrap()
+    }
+}
 
 #[allow(dead_code)]
 pub struct Nsid(String);
 
-impl<'a> FromParam<'a> for Nsid {
-    type Error = &'a str;
-
-    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+impl Nsid {
+    pub fn from_param(param: &str) -> Result<Self, String> {
         // This is how we make sure we allowlist lexicons and what gets proxied
         if param.starts_with("app.bsky.") || param.starts_with("chat.bsky") {
             Ok(Nsid(param.to_string()))
         } else {
-            Err(param)
+            Err(format!("Invalid NSID: {}", param))
         }
     }
 }
 
-// Lower ranks have higher presidence
-#[tracing::instrument(skip_all)]
-#[allow(unused_variables)]
-#[rocket::get("/xrpc/<nsid>?<query..>", rank = 2)]
-pub async fn bsky_api_get_forwarder(
-    nsid: Nsid,
-    query: Option<&str>,
-    auth: AccessStandard,
-    req: ProxyRequest<'_>,
-) -> Result<ProxyResponder, ApiError> {
-    let requester: Option<String> = auth.access.credentials.did;
-    match pipethrough_procedure::<()>(&req, requester, None).await {
-        Ok(res) => {
-            let headers = res.headers.expect("Upstream responded without headers.");
-            let content_length = match headers.get("content-length") {
-                None => Header::new("content-length", res.buffer.len().to_string()),
-                Some(val) => Header::new("content-length", val.to_string()),
-            };
-            let content_type = match headers.get("content-type") {
-                None => Header::new("content-type", "octet-stream".to_string()),
-                Some(val) => Header::new("Content-Type", val.to_string()),
-            };
-            Ok(ProxyResponder(res.buffer, content_length, content_type))
-        }
-        Err(error) => {
-            tracing::error!("@LOG: ERROR: {error}");
-            Err(ApiError::RuntimeError)
-        }
-    }
-}
-
-#[rocket::post("/xrpc/<_nsid>", data = "<body>", rank = 2)]
-pub async fn bsky_api_post_forwarder(
-    body: Data<'_>,
-    _nsid: Nsid,
-    auth: AccessStandard,
-    req: ProxyRequest<'_>,
-) -> Result<ProxyResponder, ApiError> {
-    let requester: Option<String> = auth.access.credentials.did;
-
-    let res = pipethrough_procedure_post(&req, requester, Some(body)).await?;
-    let headers = res.headers.expect("Upstream responded without headers.");
-    let content_length = match headers.get("content-length") {
-        None => Header::new("content-length", res.buffer.len().to_string()),
-        Some(val) => Header::new("content-length", val.to_string()),
-    };
-    let content_type = match headers.get("content-type") {
-        None => Header::new("content-type", "application/octet-stream".to_string()),
-        Some(val) => Header::new("Content-Type", val.to_string()),
-    };
-    Ok(ProxyResponder(res.buffer, content_length, content_type))
-}
+// Routes will be implemented with Axum in the main application
 
 #[derive(Clone, Debug)]
 pub enum ApiError {
@@ -112,254 +103,113 @@ pub struct ErrorBody {
     message: String,
 }
 
-impl<'r, 'o: 'r> ::rocket::response::Responder<'r, 'o> for ApiError {
-    fn respond_to(self, __req: &'r Request<'_>) -> response::Result<'o> {
+impl ApiError {
+    /// Get the appropriate HTTP status code for this error
+    pub fn status_code(&self) -> StatusCode {
         match self {
-            ApiError::RuntimeError => {
-                let body = Json(ErrorBody {
-                    error: "InternalServerError".to_string(),
-                    message: "Something went wrong".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 500u16 });
-                Ok(res)
-            }
-            ApiError::InvalidLogin => {
-                let body = Json(ErrorBody {
-                    error: "InvalidLogin".to_string(),
-                    message: "Invalid identifier or password".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType(::rocket::http::MediaType::const_new(
-                    "application",
-                    "json",
-                    &[],
-                )));
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::AccountTakendown => {
-                let body = Json(ErrorBody {
-                    error: "AccountTakendown".to_string(),
-                    message: "Account has been taken down".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType(::rocket::http::MediaType::const_new(
-                    "application",
-                    "json",
-                    &[],
-                )));
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::InvalidRequest(message) => {
-                let body = Json(ErrorBody {
-                    error: "InvalidRequest".to_string(),
-                    message,
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::ExpiredToken => {
-                let body = Json(ErrorBody {
-                    error: "ExpiredToken".to_string(),
-                    message: "Token is expired".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::InvalidToken => {
-                let body = Json(ErrorBody {
-                    error: "InvalidToken".to_string(),
-                    message: "Token is invalid".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::InvalidHandle => {
-                let body = Json(ErrorBody {
-                    error: "InvalidHandle".to_string(),
-                    message: "Handle is invalid".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::InvalidEmail => {
-                let body = Json(ErrorBody {
-                    error: "InvalidEmail".to_string(),
-                    message: "Invalid email".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::InvalidPassword => {
-                let body = Json(ErrorBody {
-                    error: "InvalidPassword".to_string(),
-                    message: "Invalid Password".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::InvalidInviteCode => {
-                let body = Json(ErrorBody {
-                    error: "InvalidInviteCode".to_string(),
-                    message: "Invalid invite code".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::HandleNotAvailable => {
-                let body = Json(ErrorBody {
-                    error: "HandleNotAvailable".to_string(),
-                    message: "Handle not available".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::EmailNotAvailable => {
-                let body = Json(ErrorBody {
-                    error: "EmailNotAvailable".to_string(),
-                    message: "Email not available".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::UnsupportedDomain => {
-                let body = Json(ErrorBody {
-                    error: "UnsupportedDomain".to_string(),
-                    message: "Unsupported domain".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::UnresolvableDid => {
-                let body = Json(ErrorBody {
-                    error: "UnresolvableDid".to_string(),
-                    message: "Unresolved Did".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::IncompatibleDidDoc => {
-                let body = Json(ErrorBody {
-                    error: "IncompatibleDidDoc".to_string(),
-                    message: "IncompatibleDidDoc".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::AccountNotFound => {
-                let body = Json(ErrorBody {
-                    error: "AccountNotFound".to_string(),
-                    message: "Account could not be found".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::BlobNotFound => {
-                let body = Json(ErrorBody {
-                    error: "BlobNotFound".to_string(),
-                    message: "Blob could not be found".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::WellKnownNotFound => {
-                let body = Json(ErrorBody {
-                    error: "WellKnownNotFound".to_string(),
-                    message: "User not found".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType(::rocket::http::MediaType::const_new(
-                    "application",
-                    "json",
-                    &[],
-                )));
-                res.set_status(Status { code: 404u16 });
-                Ok(res)
-            }
-            ApiError::BadRequest(error, message) => {
-                let body = Json(ErrorBody { error, message });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 400u16 });
-                Ok(res)
-            }
-            ApiError::AuthRequiredError(message) => {
-                let body = Json(ErrorBody {
-                    error: "AuthRequiredError".to_string(),
-                    message,
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType(::rocket::http::MediaType::const_new(
-                    "application",
-                    "json",
-                    &[],
-                )));
-                res.set_status(Status { code: 401u16 });
-                Ok(res)
-            }
-            ApiError::RecordNotFound => {
-                let body = Json(ErrorBody {
-                    error: "RecordNotFound".to_string(),
-                    message: "Record could not be found".to_string(),
-                });
-                let mut res =
-                    <Json<ErrorBody> as ::rocket::response::Responder>::respond_to(body, __req)?;
-                res.set_header(ContentType::JSON);
-                res.set_status(Status { code: 404u16 });
-                Ok(res)
-            }
+            Self::RuntimeError => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::InvalidLogin
+            | Self::ExpiredToken
+            | Self::InvalidToken
+            | Self::AuthRequiredError(_) => StatusCode::UNAUTHORIZED,
+            Self::AccountTakendown => StatusCode::FORBIDDEN,
+            Self::RecordNotFound
+            | Self::WellKnownNotFound
+            | Self::AccountNotFound
+            | Self::BlobNotFound => StatusCode::NOT_FOUND,
+            // All bad requests grouped together
+            _ => StatusCode::BAD_REQUEST,
         }
+    }
+
+    /// Get the error type string for API responses
+    fn error_type(&self) -> String {
+        match self {
+            Self::RuntimeError => "InternalServerError",
+            Self::InvalidLogin => "InvalidLogin",
+            Self::AccountTakendown => "AccountTakendown",
+            Self::InvalidRequest(_) => "InvalidRequest",
+            Self::ExpiredToken => "ExpiredToken",
+            Self::InvalidToken => "InvalidToken",
+            Self::RecordNotFound => "RecordNotFound",
+            Self::InvalidHandle => "InvalidHandle",
+            Self::InvalidEmail => "InvalidEmail",
+            Self::InvalidPassword => "InvalidPassword",
+            Self::InvalidInviteCode => "InvalidInviteCode",
+            Self::HandleNotAvailable => "HandleNotAvailable",
+            Self::EmailNotAvailable => "EmailNotAvailable",
+            Self::UnsupportedDomain => "UnsupportedDomain",
+            Self::UnresolvableDid => "UnresolvableDid",
+            Self::IncompatibleDidDoc => "IncompatibleDidDoc",
+            Self::WellKnownNotFound => "WellKnownNotFound",
+            Self::AccountNotFound => "AccountNotFound",
+            Self::BlobNotFound => "BlobNotFound",
+            Self::BadRequest(error, _) => error,
+            Self::AuthRequiredError(_) => "AuthRequiredError",
+        }
+        .to_owned()
+    }
+
+    /// Get the user-facing error message
+    fn message(&self) -> String {
+        match self {
+            Self::RuntimeError => "Something went wrong",
+            Self::InvalidLogin => "Invalid identifier or password",
+            Self::AccountTakendown => "Account has been taken down",
+            Self::InvalidRequest(msg) => msg,
+            Self::ExpiredToken => "Token is expired",
+            Self::InvalidToken => "Token is invalid",
+            Self::RecordNotFound => "Record could not be found",
+            Self::InvalidHandle => "Handle is invalid",
+            Self::InvalidEmail => "Invalid email",
+            Self::InvalidPassword => "Invalid Password",
+            Self::InvalidInviteCode => "Invalid invite code",
+            Self::HandleNotAvailable => "Handle not available",
+            Self::EmailNotAvailable => "Email not available",
+            Self::UnsupportedDomain => "Unsupported domain",
+            Self::UnresolvableDid => "Unresolved Did",
+            Self::IncompatibleDidDoc => "IncompatibleDidDoc",
+            Self::WellKnownNotFound => "User not found",
+            Self::AccountNotFound => "Account could not be found",
+            Self::BlobNotFound => "Blob could not be found",
+            Self::BadRequest(_, msg) => msg,
+            Self::AuthRequiredError(msg) => msg,
+        }
+        .to_owned()
+    }
+}
+
+impl IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        let status = self.status_code();
+        let error_body = ErrorBody {
+            error: self.error_type(),
+            message: self.message(),
+        };
+
+        // If this is a debug build, log the error
+        if cfg!(debug_assertions) {
+            tracing::error!("API Error: {}: {}", error_body.error, error_body.message);
+        }
+
+        // Serialize to JSON and create response
+        let body = match serde_json::to_string(&error_body) {
+            Ok(json) => json,
+            Err(_) => r#"{"error":"InternalServerError","message":"Error serializing response"}"#
+                .to_owned(),
+        };
+
+        Response::builder()
+            .status(status)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(body))
+            .unwrap_or_else(|_| Response::new(Body::from("Internal Server Error")))
+    }
+}
+
+impl fmt::Display for ApiError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.error_type(), self.message())
     }
 }
 

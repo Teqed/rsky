@@ -102,7 +102,7 @@ mod tests {
             &self,
             credentials: SignInCredentials,
             device_id: DeviceId,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + '_>>
         {
             let expected_credentials = SignInCredentials {
                 username: "username".to_string(),
@@ -140,7 +140,7 @@ mod tests {
             device_id: DeviceId,
             sub: Sub,
             client_id: OAuthClientId,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             Box::pin(async move {
                 if device_id == DeviceId::new("dev-64976a0a962c4b7521abd679789c44a3").unwrap() {
                     Ok(())
@@ -154,7 +154,7 @@ mod tests {
             &self,
             device_id: DeviceId,
             sub: Sub,
-        ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Option<AccountInfo>, OAuthError>> + Send + '_>>
         {
             Box::pin(async move {
                 if device_id == DeviceId::new("dev-64976a0a962c4b7521abd679789c44a2").unwrap()
@@ -186,14 +186,14 @@ mod tests {
             &self,
             device_id: DeviceId,
             sub: Sub,
-        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + Sync + '_>> {
+        ) -> Pin<Box<dyn Future<Output = Result<(), OAuthError>> + Send + '_>> {
             unimplemented!()
         }
 
         fn list_device_accounts(
             &self,
             device_id: DeviceId,
-        ) -> Pin<Box<dyn Future<Output = Result<Vec<AccountInfo>, OAuthError>> + Send + Sync + '_>>
+        ) -> Pin<Box<dyn Future<Output = Result<Vec<AccountInfo>, OAuthError>> + Send + '_>>
         {
             Box::pin(async move {
                 if device_id == DeviceId::new("dev-64976a0a962c4b7521abd679789c44a4").unwrap() {

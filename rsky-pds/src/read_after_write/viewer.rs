@@ -1,7 +1,7 @@
 use crate::account_manager::helpers::auth::ServiceJwtParams;
 use crate::account_manager::AccountManager;
 use crate::actor_store::ActorStore;
-use crate::models::models;
+use crate::models::models::actor_store as models;
 use crate::read_after_write::types::{LocalRecords, RecordDescript};
 use crate::read_after_write::util;
 use crate::xrpc_server::auth::create_service_auth_headers;
@@ -165,13 +165,15 @@ impl LocalViewer {
     }
 
     pub async fn get_profile_basic(&self) -> Result<Option<ProfileViewBasic>> {
-        use crate::schema::pds::record::dsl as RecordSchema;
-        use crate::schema::pds::repo_block::dsl as RepoBlockSchema;
+        use crate::schema::actor_store::record::dsl as RecordSchema;
+        use crate::schema::actor_store::repo_block::dsl as RepoBlockSchema;
 
         let db = self.actor_store.record.db.clone();
         let did = self.actor_store.did.clone();
         let profile_res: Option<(models::Record, Option<models::RepoBlock>)> = db
-            .run(move |conn| {
+            .get()
+            .await?
+            .interact(move |conn| {
                 RecordSchema::record
                     .left_join(
                         RepoBlockSchema::repo_block.on(RepoBlockSchema::cid.eq(RecordSchema::cid)),
@@ -186,7 +188,8 @@ impl LocalViewer {
                     .first(conn)
                     .optional()
             })
-            .await?;
+            .await
+            .expect("Failed to get profile")?;
         let account_res = self.account_manager.get_account(&self.did, None).await?;
         match account_res {
             None => Ok(None),
@@ -654,8 +657,8 @@ impl LocalViewer {
 }
 
 pub async fn get_records_since_rev(actor_store: &ActorStore, rev: String) -> Result<LocalRecords> {
-    use crate::schema::pds::record::dsl as RecordSchema;
-    use crate::schema::pds::repo_block::dsl as RepoBlockSchema;
+    use crate::schema::actor_store::record::dsl as RecordSchema;
+    use crate::schema::actor_store::repo_block::dsl as RepoBlockSchema;
 
     let did = actor_store.did.clone();
     let did_1 = did.clone();
@@ -663,7 +666,9 @@ pub async fn get_records_since_rev(actor_store: &ActorStore, rev: String) -> Res
     let res: Vec<(models::Record, models::RepoBlock)> = actor_store
         .record
         .db
-        .run(move |conn| {
+        .get()
+        .await?
+        .interact(move |conn| {
             RecordSchema::record
                 .inner_join(
                     RepoBlockSchema::repo_block.on(RepoBlockSchema::cid.eq(RecordSchema::cid)),
@@ -675,24 +680,30 @@ pub async fn get_records_since_rev(actor_store: &ActorStore, rev: String) -> Res
                 .order_by(RecordSchema::repoRev.asc())
                 .get_results(conn)
         })
-        .await?;
+        .await
+        .expect("Failed to get records since revision")?;
 
     // sanity check to ensure that the clock received is not before _all_ local records
     // (for instance in case of account migration)
     if !res.is_empty() {
+        let did_clone = did.clone();
+        let rev_clone = rev.clone();
         let sanity_checks = actor_store
             .record
             .db
-            .run(move |conn| {
+            .get()
+            .await?
+            .interact(move |conn| {
                 RecordSchema::record
                     .select(models::Record::as_select())
-                    .filter(RecordSchema::did.eq(&did))
-                    .filter(RecordSchema::repoRev.le(&rev))
+                    .filter(RecordSchema::did.eq(&did_clone))
+                    .filter(RecordSchema::repoRev.le(&rev_clone))
                     .limit(1)
                     .first(conn)
                     .optional()
             })
-            .await?;
+            .await
+            .expect("Failed to perform sanity check")?;
         if sanity_checks.is_none() {
             return Ok(LocalRecords {
                 count: 0,
