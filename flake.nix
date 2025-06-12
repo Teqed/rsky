@@ -150,95 +150,84 @@
                   description = "The path to the PDS package.";
                 };
 
-                settings = mkOption {
-                  type = types.submodule {
-                    freeformType = types.attrsOf (
-                      types.oneOf [
-                        (types.nullOr types.str)
-                        types.port
-                      ]
-                    );
-                    options = {
-                      PDS_PORT = mkOption {
-                        type = types.port;
-                        default = 2583;
-                        description = "Port to listen on";
-                      };
-
-                      PDS_HOSTNAME = mkOption {
-                        type = types.str;
-                        example = "pds.example.com";
-                        description = "Instance hostname (base domain name)";
-                      };
-
-                      PDS_BLOB_UPLOAD_LIMIT = mkOption {
-                        type = types.str;
-                        default = "52428800";
-                        description = "Size limit of uploaded blobs in bytes";
-                      };
-
-                      PDS_DID_PLC_URL = mkOption {
-                        type = types.str;
-                        default = "https://plc.directory";
-                        description = "URL of DID PLC directory";
-                      };
-
-                      PDS_BSKY_APP_VIEW_URL = mkOption {
-                        type = types.str;
-                        default = "https://api.bsky.app";
-                        description = "URL of bsky frontend";
-                      };
-
-                      PDS_BSKY_APP_VIEW_DID = mkOption {
-                        type = types.str;
-                        default = "did:web:api.bsky.app";
-                        description = "DID of bsky frontend";
-                      };
-
-                      PDS_REPORT_SERVICE_URL = mkOption {
-                        type = types.str;
-                        default = "https://mod.bsky.app";
-                        description = "URL of mod service";
-                      };
-
-                      PDS_REPORT_SERVICE_DID = mkOption {
-                        type = types.str;
-                        default = "did:plc:ar7c4by46qjdydhdevvrndac";
-                        description = "DID of mod service";
-                      };
-
-                      PDS_CRAWLERS = mkOption {
-                        type = types.str;
-                        default = "https://bsky.network";
-                        description = "URL of crawlers";
-                      };
-
-                      PDS_DEV_MODE = mkOption {
-                        type = types.bool;
-                        default = true;
-                        description = "Enable dev mode";
-                      };
-
-                      # PDS_DATA_DIRECTORY = mkOption {
-                      #   type = types.str;
-                      #   default = "/var/lib/pds";
-                      #   description = "Directory to store state";
-                      # };
-
-                      PDS_BLOBSTORE_DISK_LOCATION = mkOption {
-                        type = types.nullOr types.str;
-                        default = "/var/lib/pds/blocks";
-                        description = "Store blobs at this location, set to null to use e.g. S3";
-                      };
-
-                      # LOG_ENABLED = mkOption {
-                      #   type = types.nullOr types.str;
-                      #   default = "true";
-                      #   description = "Enable logging";
-                      # };
-                    };
-                  };
+                PDS_PORT = mkOption {
+                  type = types.port;
+                  default = 2583;
+                  description = "Port to listen on";
                 };
+
+                PDS_HOSTNAME = mkOption {
+                  type = types.str;
+                  example = "pds.example.com";
+                  description = "Instance hostname (base domain name)";
+                };
+
+                PDS_BLOB_UPLOAD_LIMIT = mkOption {
+                  type = types.str;
+                  default = "52428800";
+                  description = "Size limit of uploaded blobs in bytes";
+                };
+
+                PDS_DID_PLC_URL = mkOption {
+                  type = types.str;
+                  default = "https://plc.directory";
+                  description = "URL of DID PLC directory";
+                };
+
+                PDS_BSKY_APP_VIEW_URL = mkOption {
+                  type = types.str;
+                  default = "https://api.bsky.app";
+                  description = "URL of bsky frontend";
+                };
+
+                PDS_BSKY_APP_VIEW_DID = mkOption {
+                  type = types.str;
+                  default = "did:web:api.bsky.app";
+                  description = "DID of bsky frontend";
+                };
+
+                PDS_REPORT_SERVICE_URL = mkOption {
+                  type = types.str;
+                  default = "https://mod.bsky.app";
+                  description = "URL of mod service";
+                };
+
+                PDS_REPORT_SERVICE_DID = mkOption {
+                  type = types.str;
+                  default = "did:plc:ar7c4by46qjdydhdevvrndac";
+                  description = "DID of mod service";
+                };
+
+                PDS_CRAWLERS = mkOption {
+                  type = types.str;
+                  default = "https://bsky.network";
+                  description = "URL of crawlers";
+                };
+
+                PDS_DEV_MODE = mkOption {
+                  type = types.bool;
+                  default = true;
+                  description = "Enable dev mode";
+                };
+
+                # PDS_DATA_DIRECTORY = mkOption {
+                #   type = types.str;
+                #   default = "/var/lib/pds";
+                #   description = "Directory to store state";
+                # };
+
+                PDS_BLOBSTORE_DISK_LOCATION = mkOption {
+                  type = types.nullOr types.str;
+                  default = "/var/lib/pds/blocks";
+                  description = "Store blobs at this location";
+                };
+
+                # LOG_ENABLED = mkOption {
+                #   type = types.nullOr types.str;
+                #   default = "true";
+                #   description = "Enable logging";
+                # };
+
                 environmentFiles = mkOption {
                 type = types.listOf types.path;
                 default = [ "/run/secrets/pds.env" ];
