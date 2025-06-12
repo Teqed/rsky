@@ -239,26 +239,26 @@
                     };
                   };
                 };
-                environmentFiles = mkOption {
-                type = types.listOf types.path;
-                default = [ "/run/secrets/pds.env" ];
-                description = ''
-                    File to load environment variables from. Loaded variables override
-                    values set in {option}`environment`.
+                # environmentFiles = mkOption {
+                # type = types.listOf types.path;
+                # default = [ "/run/secrets/pds.env" ];
+                # description = ''
+                #     File to load environment variables from. Loaded variables override
+                #     values set in {option}`environment`.
 
-                    Use it to set values of secrets.
+                #     Use it to set values of secrets.
 
-                    `PDS_ADMIN_PASSWORD` can be generated with
-                    ```
-                    openssl rand --hex 16
-                    ```
-                    `PDS_JWT_KEY_K256_PRIVATE_KEY_HEX`, `PDS_REPO_SIGNING_KEY_K256_PRIVATE_KEY_HEX`,
-                    and `PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX` can be generated with
-                    ```
-                    openssl ecparam --name secp256k1 --genkey --noout --outform DER | tail --bytes=+8 | head --bytes=32 | xxd --plain --cols 32
-                    ```
-                '';
-                };
+                #     `PDS_ADMIN_PASSWORD` can be generated with
+                #     ```
+                #     openssl rand --hex 16
+                #     ```
+                #     `PDS_JWT_KEY_K256_PRIVATE_KEY_HEX`, `PDS_REPO_SIGNING_KEY_K256_PRIVATE_KEY_HEX`,
+                #     and `PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX` can be generated with
+                #     ```
+                #     openssl ecparam --name secp256k1 --genkey --noout --outform DER | tail --bytes=+8 | head --bytes=32 | xxd --plain --cols 32
+                #     ```
+                # '';
+                # };
               config = mkIf cfg.enable {
                 systemd.services.rsky-pds = {
                   description = "rsky-pds";
