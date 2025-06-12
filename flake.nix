@@ -107,6 +107,7 @@
           # MY_CUSTOM_DEVELOPMENT_VAR = "something else";
           RUST_BACKTRACE = 1;
           NIXOS_OZONE_WL=1;
+          LIBCLANG_PATH = "${pkgs.llvmPackages_16.libclang.lib}/lib";
 
           # Extra inputs can be added here; cargo and rustc are provided by default.
           packages = with pkgs; [
@@ -121,6 +122,7 @@
             nixd
             direnv
             libpq
+            clang
           ];
         };
       })
@@ -228,7 +230,7 @@
                       # };
                     };
                   };
-
+                };
                 environmentFiles = mkOption {
                 type = types.listOf types.path;
                 default = [ "/run/secrets/pds.env" ];
@@ -249,7 +251,6 @@
                     ```
                 '';
                 };
-              };
               config = mkIf cfg.enable {
                 systemd.services.rsky-pds = {
                   description = "rsky-pds pds";
