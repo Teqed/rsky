@@ -214,8 +214,8 @@
                       };
 
                       PDS_DEV_MODE = mkOption {
-                        type = types.bool;
-                        default = true;
+                        type = types.str;
+                        default = "true";
                         description = "Enable dev mode";
                       };
 
@@ -226,9 +226,9 @@
                       # };
 
                       PDS_BLOBSTORE_DISK_LOCATION = mkOption {
-                        type = types.nullOr types.str;
+                        type = types.str;
                         default = "/var/lib/pds/blocks";
-                        description = "Store blobs at this location, set to null to use e.g. S3";
+                        description = "Store blobs at this location";
                       };
 
                       # LOG_ENABLED = mkOption {
