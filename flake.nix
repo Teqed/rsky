@@ -43,11 +43,17 @@
           buildInputs = [
             # Add additional build inputs here
             pkgs.openssl
+            pkgs.postgresql
+            pkgs.libpq
+            pkgs.clang
+            pkgs.libclang
           ] ++ lib.optionals pkgs.stdenv.isDarwin [
             # Additional darwin specific inputs can be set here
             pkgs.libiconv
             pkgs.darwin.apple_sdk.frameworks.Security
           ];
+          LIBCLANG_PATH = "${pkgs.llvmPackages_18.libclang.lib}/lib";
+          CLANG_PATH = "${pkgs.llvmPackages_18.clang}/bin/clang";
 
           # Additional environment variables can be set directly
           # MY_CUSTOM_VAR = "some value";
@@ -70,7 +76,22 @@
             fileset = lib.fileset.unions [
               ./Cargo.toml
               ./Cargo.lock
+              ./rsky-pds/migrations
+              (craneLib.fileset.commonCargoSources ./cypher)
+              (craneLib.fileset.commonCargoSources ./rsky-common)
+              (craneLib.fileset.commonCargoSources ./rsky-crypto)
+              (craneLib.fileset.commonCargoSources ./rsky-feedgen)
+              (craneLib.fileset.commonCargoSources ./rsky-firehose)
+              (craneLib.fileset.commonCargoSources ./rsky-identity)
+              (craneLib.fileset.commonCargoSources ./rsky-jetstream-subscriber)
+              (craneLib.fileset.commonCargoSources ./rsky-labeler)
+              (craneLib.fileset.commonCargoSources ./rsky-lexicon)
               (craneLib.fileset.commonCargoSources ./rsky-pds)
+              (craneLib.fileset.commonCargoSources ./rsky-pdsadmin)
+              (craneLib.fileset.commonCargoSources ./rsky-relay)
+              (craneLib.fileset.commonCargoSources ./rsky-repo)
+              (craneLib.fileset.commonCargoSources ./rsky-satnav)
+              (craneLib.fileset.commonCargoSources ./rsky-syntax)
               (craneLib.fileset.commonCargoSources crate)
             ];
           };
@@ -84,19 +105,105 @@
             cargoExtraArgs = "-p rsky-pds";
             src = fileSetForCrate ./rsky-pds;
             postInstall = ''
-              mkdir -p $out/{bin,lib/pds}
+              mkdir -p $out/{bin,lib/rsky-pds}
+              mkdir -p /var/lib/rsky-pds
             '';
+          });
+        rsky-common = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-common";
+            cargoExtraArgs = "-p rsky-common";
+            src = fileSetForCrate ./rsky-common;
+          });
+        rsky-crypto = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-crypto";
+            cargoExtraArgs = "-p rsky-crypto";
+            src = fileSetForCrate ./rsky-crypto;
+          });
+        rsky-feedgen = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-feedgen";
+            cargoExtraArgs = "-p rsky-feedgen";
+            src = fileSetForCrate ./rsky-feedgen;
+          });
+        rsky-firehose = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-firehose";
+            cargoExtraArgs = "-p rsky-firehose";
+            src = fileSetForCrate ./rsky-firehose;
+          });
+        rsky-identity = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-identity";
+            cargoExtraArgs = "-p rsky-identity";
+            src = fileSetForCrate ./rsky-identity;
+          });
+        rsky-jetstream-subscriber = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-jetstream-subscriber";
+            cargoExtraArgs = "-p rsky-jetstream-subscriber";
+            src = fileSetForCrate ./rsky-jetstream-subscriber;
+          });
+        rsky-lexicon = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-lexicon";
+            cargoExtraArgs = "-p rsky-lexicon";
+            src = fileSetForCrate ./rsky-lexicon;
+          });
+        # rsky-pdsadmin = craneLib.buildPackage (
+        #   individualCrateArgs
+        #   // {
+        #     pname = "rsky-pdsadmin";
+        #     cargoExtraArgs = "-p rsky-pdsadmin";
+        #     src = fileSetForCrate ./rsky-pdsadmin;
+        #   });
+        rsky-relay = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-relay";
+            cargoExtraArgs = "-p rsky-relay";
+            src = fileSetForCrate ./rsky-relay;
+          });
+        rsky-repo = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-repo";
+            cargoExtraArgs = "-p rsky-repo";
+            src = fileSetForCrate ./rsky-repo;
+          });
+        # rsky-satnav = craneLib.buildPackage (
+        #   individualCrateArgs
+        #   // {
+        #     pname = "rsky-satnav";
+        #     cargoExtraArgs = "-p rsky-satnav";
+        #     src = fileSetForCrate ./rsky-satnav;
+        #   });
+        rsky-syntax = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-syntax";
+            cargoExtraArgs = "-p rsky-syntax";
+            src = fileSetForCrate ./rsky-syntax;
           });
       in
       {
         checks = {
           # Build the crate as part of `nix flake check` for convenience
-          inherit rsky-pds;
+          # - rsky-pdsadmin , rsky-satnav
+          inherit rsky-pds rsky-common rsky-crypto rsky-feedgen rsky-firehose rsky-identity rsky-jetstream-subscriber rsky-lexicon rsky-relay rsky-repo rsky-syntax;
         };
 
         packages = {
           default = rsky-pds;
-          inherit rsky-pds;
+          inherit rsky-pds rsky-common rsky-crypto rsky-feedgen rsky-firehose rsky-identity rsky-jetstream-subscriber rsky-lexicon rsky-relay rsky-repo rsky-syntax;
         };
 
         devShells.default = craneLib.devShell {
@@ -107,7 +214,7 @@
           # MY_CUSTOM_DEVELOPMENT_VAR = "something else";
           RUST_BACKTRACE = 1;
           NIXOS_OZONE_WL=1;
-          LIBCLANG_PATH = "${pkgs.llvmPackages_16.libclang.lib}/lib";
+          LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
 
           # Extra inputs can be added here; cargo and rustc are provided by default.
           packages = with pkgs; [
@@ -123,6 +230,7 @@
             direnv
             libpq
             clang
+            libclang
           ];
         };
       })
@@ -221,13 +329,13 @@
 
                       # PDS_DATA_DIRECTORY = mkOption {
                       #   type = types.str;
-                      #   default = "/var/lib/pds";
+                      #   default = "/var/rsky-pds/pds";
                       #   description = "Directory to store state";
                       # };
 
                       PDS_BLOBSTORE_DISK_LOCATION = mkOption {
                         type = types.str;
-                        default = "/var/lib/pds/blocks";
+                        default = "/var/lib/rsky-pds/blocks";
                         description = "Store blobs at this location";
                       };
 
@@ -241,7 +349,7 @@
                 };
                 environmentFiles = mkOption {
                 type = types.listOf types.path;
-                default = [ "/run/secrets/pds.env" ];
+                default = [ "/var/lib/rsky-pds/pds.env" ];
                 description = ''
                     File to load environment variables from. Loaded variables override
                     values set in {option}`environment`.
@@ -259,6 +367,7 @@
                     ```
                 '';
                 };
+              };
               config = mkIf cfg.enable {
                 systemd.services.rsky-pds = {
                   description = "rsky-pds";
@@ -339,11 +448,10 @@
                       #type database  DBuser  auth-method optional_ident_map
                       local pds       pds     peer        map=superuser_map
                     '';
-                  package = pkgs.postgresql_16;
+                  package = mkForce pkgs.postgresql_16;
+                    };
                 };
-              };
-            };
             };
         };
-      });
+    });
 }
