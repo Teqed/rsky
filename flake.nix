@@ -129,12 +129,20 @@
       // flake-utils.lib.eachDefaultSystemPassThrough (system:
       {
         nixosModules = {
-          default = { pkgs, lib, config, ... }: with lib; let
+          default = { pkgs, lib, config, ... }: with lib;
+          let
               cfg = config.services.rsky-pds;
+
+              inherit (lib)
+                mkEnableOption
+                mkIf
+                mkOption
+                types
+                ;
             in
             {
               options.services.rsky-pds = {
-                enable = mkEnableOption "Enable PDS";
+                enable = mkEnableOption "rsky-pds";
 
                 package = mkOption {
                   type = types.package;
@@ -253,7 +261,7 @@
                 };
               config = mkIf cfg.enable {
                 systemd.services.rsky-pds = {
-                  description = "rsky-pds pds";
+                  description = "rsky-pds";
                   after = [ "network-online.target" ];
                   wants = [ "network-online.target" ];
                   wantedBy = [ "multi-user.target" ];
