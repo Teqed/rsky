@@ -223,11 +223,13 @@ pub async fn build_rocket(cfg: Option<RocketConfig>) -> Rocket<Build> {
     let mut background_sequencer = sequencer.sequencer.write().await.clone();
     tokio::spawn(async move { background_sequencer.start().await });
 
-    let blob_config = match env::var("PDS_BLOB_PATH") {
+    let blob_config = match env::var("PDS_BLOBSTORE_DISK_LOCATION") {
         Ok(path) => std::path::PathBuf::from(path),
         Err(_) => {
-            tracing::warn!("PDS_BLOB_PATH not set, using default path");
-            std::path::PathBuf::from("/tmp/pds/blobs")
+            tracing::warn!(
+                "PDS_BLOBSTORE_DISK_LOCATION not set, using default path (/var/lib/pds/blocks)"
+            );
+            std::path::PathBuf::from("/var/lib/pds/blocks")
         }
     };
 

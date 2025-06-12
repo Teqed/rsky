@@ -215,11 +215,11 @@
                       #   description = "Directory to store state";
                       # };
 
-                      # PDS_BLOBSTORE_DISK_LOCATION = mkOption {
-                      #   type = types.nullOr types.str;
-                      #   default = "/var/lib/pds/blocks";
-                      #   description = "Store blobs at this location, set to null to use e.g. S3";
-                      # };
+                      PDS_BLOBSTORE_DISK_LOCATION = mkOption {
+                        type = types.nullOr types.str;
+                        default = "/var/lib/pds/blocks";
+                        description = "Store blobs at this location, set to null to use e.g. S3";
+                      };
 
                       # LOG_ENABLED = mkOption {
                       #   type = types.nullOr types.str;
@@ -228,6 +228,27 @@
                       # };
                     };
                   };
+
+                environmentFiles = mkOption {
+                type = types.listOf types.path;
+                default = [ "/run/secrets/pds.env" ];
+                description = ''
+                    File to load environment variables from. Loaded variables override
+                    values set in {option}`environment`.
+
+                    Use it to set values of secrets.
+
+                    `PDS_ADMIN_PASSWORD` can be generated with
+                    ```
+                    openssl rand --hex 16
+                    ```
+                    `PDS_JWT_KEY_K256_PRIVATE_KEY_HEX`, `PDS_REPO_SIGNING_KEY_K256_PRIVATE_KEY_HEX`,
+                    and `PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX` can be generated with
+                    ```
+                    openssl ecparam --name secp256k1 --genkey --noout --outform DER | tail --bytes=+8 | head --bytes=32 | xxd --plain --cols 32
+                    ```
+                '';
+                };
               };
               config = mkIf cfg.enable {
                 systemd.services.rsky-pds = {
@@ -310,11 +331,6 @@
                       local pds       pds     peer        map=superuser_map
                     '';
                   package = pkgs.postgresql_16;
-                  initialScript = ''
-                    ${builtins.readFile ./rsky-pds/migrations/00000000000000_diesel_initial_setup/up.sql}
-                    ${builtins.readFile ./rsky-pds/migrations/2023-11-15-004814_pds_init/up.sql}
-                    ${builtins.readFile ./rsky-pds/migrations/2024-03-20-042639_account_deactivation/up.sql}
-                  '';
                 };
               };
             };
