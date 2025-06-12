@@ -9,10 +9,10 @@ use crate::read_after_write::viewer::LocalViewer;
 use crate::xrpc_server::types::HandlerPipeThrough;
 use crate::SharedLocalViewer;
 use anyhow::Result;
-use aws_config::SdkConfig;
 use rocket::form::validate::Contains;
 use rocket::State;
 use rsky_lexicon::app::bsky::feed::{AuthorFeed, FeedViewPost, PostView};
+use std::path::PathBuf;
 
 const METHOD_NSID: &str = "app.bsky.feed.getAuthorFeed";
 
@@ -23,7 +23,7 @@ pub async fn inner_get_author_feed(
     _filter: Option<String>,
     auth: AccessStandard,
     res: HandlerPipeThrough,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     state_local_viewer: &State<SharedLocalViewer>,
     db: DbConn,
     account_manager: AccountManager,
@@ -40,7 +40,7 @@ pub async fn inner_get_author_feed(
                 requester,
                 res,
                 get_author_munge,
-                s3_config,
+                blob_config,
                 state_local_viewer,
                 db,
                 account_manager,
@@ -61,7 +61,7 @@ pub async fn get_author_feed(
     filter: Option<String>, // Combinations of post/repost types to include in response.
     auth: AccessStandard,
     res: HandlerPipeThrough,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     state_local_viewer: &State<SharedLocalViewer>,
     cfg: &State<ServerConfig>,
     db: DbConn,
@@ -104,7 +104,7 @@ pub async fn get_author_feed(
             filter,
             auth,
             res,
-            s3_config,
+            blob_config,
             state_local_viewer,
             db,
             account_manager,

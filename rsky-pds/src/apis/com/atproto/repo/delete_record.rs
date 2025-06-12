@@ -1,6 +1,6 @@
 use crate::account_manager::helpers::account::AvailabilityFlags;
 use crate::account_manager::AccountManager;
-use crate::actor_store::aws::s3::S3BlobStore;
+use crate::actor_store::blob::fs::BlobStoreFs;
 use crate::actor_store::ActorStore;
 use crate::apis::ApiError;
 use crate::auth_verifier::AccessStandardIncludeChecks;
@@ -8,20 +8,20 @@ use crate::db::DbConn;
 use crate::repo::prepare::{prepare_delete, PrepareDeleteOpts};
 use crate::SharedSequencer;
 use anyhow::{bail, Result};
-use aws_config::SdkConfig;
 use lexicon_cid::Cid;
 use rocket::serde::json::Json;
 use rocket::State;
 use rsky_lexicon::com::atproto::repo::DeleteRecordInput;
 use rsky_repo::types::PreparedWrite;
 use rsky_syntax::aturi::AtUri;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 async fn inner_delete_record(
     body: Json<DeleteRecordInput>,
     auth: AccessStandardIncludeChecks,
     sequencer: &State<SharedSequencer>,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     db: DbConn,
     account_manager: AccountManager,
 ) -> Result<()> {
@@ -65,8 +65,11 @@ async fn inner_delete_record(
                 rkey,
                 swap_cid: swap_record_cid,
             })?;
-            let mut actor_store =
-                ActorStore::new(did.clone(), S3BlobStore::new(did.clone(), s3_config), db);
+            let mut actor_store = ActorStore::new(
+                did.clone(),
+                BlobStoreFs::new(did.clone(), blob_config.inner().clone()),
+                db,
+            );
             let write_at_uri: AtUri = write.uri.clone().try_into()?;
             let record = actor_store
                 .record
@@ -102,11 +105,11 @@ pub async fn delete_record(
     body: Json<DeleteRecordInput>,
     auth: AccessStandardIncludeChecks,
     sequencer: &State<SharedSequencer>,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     db: DbConn,
     account_manager: AccountManager,
 ) -> Result<(), ApiError> {
-    match inner_delete_record(body, auth, sequencer, s3_config, db, account_manager).await {
+    match inner_delete_record(body, auth, sequencer, blob_config, db, account_manager).await {
         Ok(()) => Ok(()),
         Err(error) => {
             tracing::error!("@LOG: ERROR: {error}");

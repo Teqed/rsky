@@ -108,7 +108,7 @@ async fn index() -> &'static str {
     | (__) || (__) || :\/: |
     | '--'P|| '--'D|| '--'S|
     `------'`------'`------'
-    
+
     This is an atproto [https://atproto.com] Personal Data Server (PDS) running the rsky-pds codebase [https://github.com/blacksky-algorithms/rsky]
 
     Most API routes are under /xrpc/
@@ -223,10 +223,13 @@ pub async fn build_rocket(cfg: Option<RocketConfig>) -> Rocket<Build> {
     let mut background_sequencer = sequencer.sequencer.write().await.clone();
     tokio::spawn(async move { background_sequencer.start().await });
 
-    let aws_sdk_config = aws_config::from_env()
-        .endpoint_url(env::var("AWS_ENDPOINT").unwrap_or("localhost".to_owned()))
-        .load()
-        .await;
+    let blob_config = match env::var("PDS_BLOB_PATH") {
+        Ok(path) => std::path::PathBuf::from(path),
+        Err(_) => {
+            tracing::warn!("PDS_BLOB_PATH not set, using default path");
+            std::path::PathBuf::from("/tmp/pds/blobs")
+        }
+    };
 
     let id_resolver = SharedIdResolver {
         id_resolver: RwLock::new(IdResolver::new(IdentityResolverOpts {
@@ -372,7 +375,7 @@ pub async fn build_rocket(cfg: Option<RocketConfig>) -> Rocket<Build> {
         .attach(DbConn::fairing())
         .attach(shield)
         .manage(sequencer)
-        .manage(aws_sdk_config)
+        .manage(blob_config)
         .manage(id_resolver)
         .manage(cfg)
         .manage(local_viewer)

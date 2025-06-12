@@ -1,6 +1,6 @@
 use crate::account_manager::helpers::account::AvailabilityFlags;
 use crate::account_manager::AccountManager;
-use crate::actor_store::aws::s3::S3BlobStore;
+use crate::actor_store::blob::fs::BlobStoreFs;
 use crate::actor_store::ActorStore;
 use crate::apis::ApiError;
 use crate::auth_verifier::AccessStandardIncludeChecks;
@@ -8,13 +8,13 @@ use crate::db::DbConn;
 use crate::repo::prepare::{prepare_create, prepare_update, PrepareCreateOpts, PrepareUpdateOpts};
 use crate::SharedSequencer;
 use anyhow::{bail, Result};
-use aws_config::SdkConfig;
 use lexicon_cid::Cid;
 use rocket::serde::json::Json;
 use rocket::State;
 use rsky_lexicon::com::atproto::repo::{PutRecordInput, PutRecordOutput};
 use rsky_repo::types::{CommitDataWithOps, PreparedWrite};
 use rsky_syntax::aturi::AtUri;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 #[tracing::instrument(skip_all)]
@@ -22,7 +22,7 @@ async fn inner_put_record(
     body: Json<PutRecordInput>,
     auth: AccessStandardIncludeChecks,
     sequencer: &State<SharedSequencer>,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     db: DbConn,
     account_manager: AccountManager,
 ) -> Result<PutRecordOutput> {
@@ -62,8 +62,11 @@ async fn inner_put_record(
             None => None,
         };
         let (commit, write): (Option<CommitDataWithOps>, PreparedWrite) = {
-            let mut actor_store =
-                ActorStore::new(did.clone(), S3BlobStore::new(did.clone(), s3_config), db);
+            let mut actor_store = ActorStore::new(
+                did.clone(),
+                BlobStoreFs::new(did.clone(), blob_config.inner().clone()),
+                db,
+            );
 
             let current = actor_store
                 .record
@@ -129,12 +132,12 @@ pub async fn put_record(
     body: Json<PutRecordInput>,
     auth: AccessStandardIncludeChecks,
     sequencer: &State<SharedSequencer>,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     db: DbConn,
     account_manager: AccountManager,
 ) -> Result<Json<PutRecordOutput>, ApiError> {
     tracing::debug!("@LOG: debug put_record {body:#?}");
-    match inner_put_record(body, auth, sequencer, s3_config, db, account_manager).await {
+    match inner_put_record(body, auth, sequencer, blob_config, db, account_manager).await {
         Ok(res) => Ok(Json(res)),
         Err(error) => {
             tracing::error!("@LOG: ERROR: {error}");

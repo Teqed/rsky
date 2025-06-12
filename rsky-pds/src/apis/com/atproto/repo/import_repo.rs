@@ -1,4 +1,4 @@
-use crate::actor_store::aws::s3::S3BlobStore;
+use crate::actor_store::blob::fs::BlobStoreFs;
 use crate::actor_store::ActorStore;
 use crate::apis::ApiError;
 use crate::auth_verifier::AccessFullImport;
@@ -7,7 +7,6 @@ use crate::repo::prepare::{
     prepare_create, prepare_delete, prepare_update, PrepareCreateOpts, PrepareDeleteOpts,
     PrepareUpdateOpts,
 };
-use aws_config::SdkConfig;
 use futures::{stream, StreamExt};
 use lexicon_cid::Cid;
 use reqwest::header;
@@ -22,6 +21,7 @@ use rsky_repo::repo::Repo;
 use rsky_repo::sync::consumer::{verify_diff, VerifyRepoInput};
 use rsky_repo::types::{PreparedWrite, RecordWriteDescript, VerifiedDiff};
 use std::num::NonZeroU64;
+use std::path::PathBuf;
 
 struct ImportRepoInput {
     car_with_root: CarWithRoot,
@@ -77,13 +77,13 @@ impl<'r> FromData<'r> for ImportRepoInput {
 pub async fn import_repo(
     auth: AccessFullImport,
     import_repo_input: ImportRepoInput,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     db: DbConn,
 ) -> Result<(), ApiError> {
     let requester = auth.access.credentials.unwrap().did.unwrap();
     let mut actor_store = ActorStore::new(
         requester.clone(),
-        S3BlobStore::new(requester.clone(), s3_config),
+        BlobStoreFs::new(requester.clone(), blob_config.inner().clone()),
         db,
     );
 

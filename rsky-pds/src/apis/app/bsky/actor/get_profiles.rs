@@ -9,9 +9,9 @@ use crate::read_after_write::viewer::LocalViewer;
 use crate::xrpc_server::types::HandlerPipeThrough;
 use crate::SharedLocalViewer;
 use anyhow::Result;
-use aws_config::SdkConfig;
 use rocket::State;
 use rsky_lexicon::app::bsky::actor::{GetProfilesOutput, ProfileViewDetailed};
+use std::path::PathBuf;
 
 const METHOD_NSID: &str = "app.bsky.actor.getProfiles";
 
@@ -19,7 +19,7 @@ pub async fn inner_get_profiles(
     _actors: Vec<String>,
     auth: AccessStandard,
     res: HandlerPipeThrough,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     state_local_viewer: &State<SharedLocalViewer>,
     db: DbConn,
     account_manager: AccountManager,
@@ -33,7 +33,7 @@ pub async fn inner_get_profiles(
         requester,
         res,
         get_profiles_munge,
-        s3_config,
+        blob_config,
         state_local_viewer,
         db,
         account_manager,
@@ -49,7 +49,7 @@ pub async fn get_profiles(
     actors: Vec<String>,
     auth: AccessStandard,
     res: HandlerPipeThrough,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     state_local_viewer: &State<SharedLocalViewer>,
     cfg: &State<ServerConfig>,
     db: DbConn,
@@ -62,7 +62,7 @@ pub async fn get_profiles(
                 actors,
                 auth,
                 res,
-                s3_config,
+                blob_config,
                 state_local_viewer,
                 db,
                 account_manager,

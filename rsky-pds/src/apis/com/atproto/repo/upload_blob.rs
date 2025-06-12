@@ -1,10 +1,9 @@
-use crate::actor_store::aws::s3::S3BlobStore;
+use crate::actor_store::blob::fs::BlobStoreFs;
 use crate::actor_store::ActorStore;
 use crate::apis::ApiError;
 use crate::auth_verifier::AccessStandardIncludeChecks;
 use crate::db::DbConn;
 use anyhow::Result;
-use aws_config::SdkConfig;
 use rocket::data::Data;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
@@ -13,6 +12,7 @@ use rocket::{Request, State};
 use rsky_common::BadContentTypeError;
 use rsky_lexicon::com::atproto::repo::{Blob, BlobOutput};
 use rsky_repo::types::{BlobConstraint, PreparedBlobRef};
+use std::path::PathBuf;
 
 #[derive(Clone)]
 pub struct ContentType {
@@ -41,14 +41,14 @@ async fn inner_upload_blob(
     auth: AccessStandardIncludeChecks,
     blob: Data<'_>,
     content_type: ContentType,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     db: DbConn,
 ) -> Result<BlobOutput> {
     let requester = auth.access.credentials.unwrap().did.unwrap();
 
     let actor_store = ActorStore::new(
         requester.clone(),
-        S3BlobStore::new(requester.clone(), s3_config),
+        BlobStoreFs::new(requester.clone(), blob_config.inner().clone()),
         db,
     );
 
@@ -96,10 +96,10 @@ pub async fn upload_blob(
     auth: AccessStandardIncludeChecks,
     blob: Data<'_>,
     content_type: ContentType,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     db: DbConn,
 ) -> Result<Json<BlobOutput>, ApiError> {
-    match inner_upload_blob(auth, blob, content_type, s3_config, db).await {
+    match inner_upload_blob(auth, blob, content_type, blob_config, db).await {
         Ok(res) => Ok(Json(res)),
         Err(error) => {
             tracing::error!("{error:?}");

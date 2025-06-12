@@ -1,6 +1,6 @@
 use crate::account_manager::helpers::account::AccountStatus;
 use crate::account_manager::{AccountManager, CreateAccountOpts};
-use crate::actor_store::aws::s3::S3BlobStore;
+use crate::actor_store::blob::fs::BlobStoreFs;
 use crate::actor_store::ActorStore;
 use crate::apis::com::atproto::server::safe_resolve_did_doc;
 use crate::apis::ApiError;
@@ -13,7 +13,7 @@ use crate::plc::types::{OpOrTombstone, Operation};
 use crate::sequencer::events::sync_evt_data_from_commit;
 use crate::SharedSequencer;
 use crate::{plc, SharedIdResolver};
-use aws_config::SdkConfig;
+
 use email_address::*;
 use rocket::serde::json::Json;
 use rocket::State;
@@ -22,6 +22,7 @@ use rsky_crypto::utils::encode_did_key;
 use rsky_lexicon::com::atproto::server::{CreateAccountInput, CreateAccountOutput};
 use secp256k1::{Keypair, Secp256k1, SecretKey};
 use std::env;
+use std::path::PathBuf;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TransformedCreateAccountInput {
@@ -46,7 +47,7 @@ pub async fn server_create_account(
     body: Json<CreateAccountInput>,
     auth: UserDidAuthOptional,
     sequencer: &State<SharedSequencer>,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     cfg: &State<ServerConfig>,
     id_resolver: &State<SharedIdResolver>,
     account_manager: AccountManager,
@@ -77,8 +78,11 @@ pub async fn server_create_account(
     .await?;
 
     // Create new actor repo TODO: Proper rollback
-    let mut actor_store =
-        ActorStore::new(did.clone(), S3BlobStore::new(did.clone(), s3_config), db);
+    let mut actor_store = ActorStore::new(
+        did.clone(),
+        BlobStoreFs::new(did.clone(), blob_config.inner().clone()),
+        db,
+    );
     let commit = match actor_store.create_repo(signing_key, Vec::new()).await {
         Ok(commit) => commit,
         Err(error) => {

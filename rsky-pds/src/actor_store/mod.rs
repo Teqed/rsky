@@ -1,7 +1,6 @@
 // based on https://github.com/bluesky-social/atproto/blob/main/packages/repo/src/repo.ts
 // also adds components from https://github.com/bluesky-social/atproto/blob/main/packages/pds/src/actor-store/repo/transactor.ts
 
-use crate::actor_store::aws::s3::S3BlobStore;
 use crate::actor_store::blob::BlobReader;
 use crate::actor_store::preference::PreferenceReader;
 use crate::actor_store::record::RecordReader;
@@ -62,8 +61,8 @@ pub struct ActorStore {
 
 // Combination of RepoReader/Transactor, BlobReader/Transactor, SqlRepoReader/Transactor
 impl ActorStore {
-    /// Concrete reader of an individual repo (hence S3BlobStore which takes `did` param)
-    pub fn new(did: String, blobstore: S3BlobStore, db: DbConn) -> Self {
+    /// Concrete reader of an individual repo (hence BlobStoreFs which takes `did` param)
+    pub fn new(did: String, blobstore: blob::fs::BlobStoreFs, db: DbConn) -> Self {
         let db = Arc::new(db);
         ActorStore {
             storage: Arc::new(RwLock::new(SqlRepoReader::new(
@@ -481,7 +480,6 @@ impl ActorStore {
     }
 }
 
-pub mod aws;
 pub mod blob;
 pub mod preference;
 pub mod record;

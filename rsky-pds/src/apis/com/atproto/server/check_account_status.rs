@@ -1,20 +1,20 @@
 use crate::account_manager::AccountManager;
-use crate::actor_store::aws::s3::S3BlobStore;
+use crate::actor_store::blob::fs::BlobStoreFs;
 use crate::actor_store::ActorStore;
 use crate::apis::com::atproto::server::is_valid_did_doc_for_service;
 use crate::apis::ApiError;
 use crate::auth_verifier::AccessFull;
 use crate::db::DbConn;
 use anyhow::Result;
-use aws_config::SdkConfig;
 use futures::try_join;
 use rocket::serde::json::Json;
 use rocket::State;
 use rsky_lexicon::com::atproto::server::CheckAccountStatusOutput;
+use std::path::PathBuf;
 
 async fn inner_check_account_status(
     auth: AccessFull,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     db: DbConn,
     account_manager: AccountManager,
 ) -> Result<CheckAccountStatusOutput> {
@@ -22,7 +22,7 @@ async fn inner_check_account_status(
 
     let mut actor_store = ActorStore::new(
         requester.clone(),
-        S3BlobStore::new(requester.clone(), s3_config),
+        BlobStoreFs::new(requester.clone(), blob_config.inner().clone()),
         db,
     );
     let repo_root = {
@@ -61,11 +61,11 @@ async fn inner_check_account_status(
 #[rocket::get("/xrpc/com.atproto.server.checkAccountStatus")]
 pub async fn check_account_status(
     auth: AccessFull,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     db: DbConn,
     account_manager: AccountManager,
 ) -> Result<Json<CheckAccountStatusOutput>, ApiError> {
-    match inner_check_account_status(auth, s3_config, db, account_manager).await {
+    match inner_check_account_status(auth, blob_config, db, account_manager).await {
         Ok(res) => Ok(Json(res)),
         Err(error) => {
             tracing::error!("Internal Error: {error}");

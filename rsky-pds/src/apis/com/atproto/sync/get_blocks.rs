@@ -1,5 +1,5 @@
 use crate::account_manager::AccountManager;
-use crate::actor_store::aws::s3::S3BlobStore;
+use crate::actor_store::blob::fs::BlobStoreFs;
 use crate::actor_store::ActorStore;
 use crate::apis::com::atproto::repo::assert_repo_availability;
 use crate::apis::ApiError;
@@ -7,11 +7,11 @@ use crate::auth_verifier;
 use crate::auth_verifier::OptionalAccessOrAdminToken;
 use crate::db::DbConn;
 use anyhow::{bail, Result};
-use aws_config::SdkConfig;
 use lexicon_cid::Cid;
 use rocket::{Responder, State};
 use rsky_repo::car::blocks_to_car_file;
 use rsky_repo::storage::readable_blockstore::ReadableBlockstore;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 #[derive(Responder)]
@@ -21,7 +21,7 @@ pub struct BlockResponder(Vec<u8>);
 async fn inner_get_blocks(
     did: String,
     cids: Vec<String>,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     auth: OptionalAccessOrAdminToken,
     db: DbConn,
     account_manager: AccountManager,
@@ -38,7 +38,11 @@ async fn inner_get_blocks(
         .map(|c| Cid::from_str(&c).map_err(anyhow::Error::new))
         .collect::<Result<Vec<Cid>>>()?;
 
-    let actor_store = ActorStore::new(did.clone(), S3BlobStore::new(did.clone(), s3_config), db);
+    let actor_store = ActorStore::new(
+        did.clone(),
+        BlobStoreFs::new(did.clone(), blob_config.inner().clone()),
+        db,
+    );
     let storage_guard = actor_store.storage.read().await;
     let got = storage_guard.get_blocks(cids).await?;
 
@@ -62,12 +66,12 @@ async fn inner_get_blocks(
 pub async fn get_blocks(
     did: String,
     cids: Vec<String>,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     auth: OptionalAccessOrAdminToken,
     db: DbConn,
     account_manager: AccountManager,
 ) -> Result<BlockResponder, ApiError> {
-    match inner_get_blocks(did, cids, s3_config, auth, db, account_manager).await {
+    match inner_get_blocks(did, cids, blob_config, auth, db, account_manager).await {
         Ok(res) => Ok(BlockResponder(res)),
         Err(error) => {
             tracing::error!("@LOG: ERROR: {error}");

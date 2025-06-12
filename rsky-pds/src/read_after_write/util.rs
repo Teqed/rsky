@@ -1,5 +1,5 @@
 use crate::account_manager::AccountManager;
-use crate::actor_store::aws::s3::S3BlobStore;
+use crate::actor_store::blob::fs::BlobStoreFs;
 use crate::actor_store::ActorStore;
 use crate::db::DbConn;
 use crate::pipethrough::parse_res;
@@ -8,7 +8,6 @@ use crate::read_after_write::viewer::{get_records_since_rev, LocalViewer};
 use crate::xrpc_server::types::HandlerPipeThrough;
 use crate::SharedLocalViewer;
 use anyhow::Result;
-use aws_config::SdkConfig;
 use chrono::offset::Utc as UtcOffset;
 use chrono::DateTime;
 use rocket::http::Status;
@@ -20,6 +19,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::io::Cursor;
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 const REPO_REV_HEADER: &str = "atproto-repo-rev";
@@ -111,7 +111,7 @@ pub async fn handle_read_after_write<T: DeserializeOwned + serde::Serialize>(
     requester: String,
     res: HandlerPipeThrough,
     munge: MungeFn<T>,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     state_local_viewer: &State<SharedLocalViewer>,
     db: DbConn,
     account_manager: AccountManager,
@@ -121,7 +121,7 @@ pub async fn handle_read_after_write<T: DeserializeOwned + serde::Serialize>(
         requester.clone(),
         res.clone(),
         munge,
-        s3_config,
+        blob_config,
         state_local_viewer,
         db,
         account_manager,
@@ -145,7 +145,7 @@ pub async fn read_after_write_internal<T: DeserializeOwned + serde::Serialize>(
     requester: String,
     res: HandlerPipeThrough,
     munge: MungeFn<T>,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     state_local_viewer: &State<SharedLocalViewer>,
     db: DbConn,
     account_manager: AccountManager,
@@ -157,7 +157,7 @@ pub async fn read_after_write_internal<T: DeserializeOwned + serde::Serialize>(
         Some(rev) => {
             let actor_store = ActorStore::new(
                 requester.clone(),
-                S3BlobStore::new(requester.clone(), s3_config),
+                BlobStoreFs::new(requester.clone(), blob_config.inner().clone()),
                 db,
             );
             let local = get_records_since_rev(&actor_store, rev).await?;

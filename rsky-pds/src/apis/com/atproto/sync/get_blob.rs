@@ -1,5 +1,5 @@
 use crate::account_manager::AccountManager;
-use crate::actor_store::aws::s3::S3BlobStore;
+use crate::actor_store::blob::fs::BlobStoreFs;
 use crate::actor_store::ActorStore;
 use crate::apis::com::atproto::repo::assert_repo_availability;
 use crate::apis::ApiError;
@@ -7,12 +7,12 @@ use crate::auth_verifier;
 use crate::auth_verifier::OptionalAccessOrAdminToken;
 use crate::db::DbConn;
 use anyhow::Result;
-use aws_config::SdkConfig;
 use aws_sdk_s3::operation::get_object::GetObjectError;
-use aws_sdk_s3::primitives::AggregatedBytes;
 use lexicon_cid::Cid;
+use rocket::http::hyper::body::Bytes;
 use rocket::http::Header;
 use rocket::{Responder, State};
+use std::path::PathBuf;
 use std::str::FromStr;
 
 #[derive(Responder)]
@@ -22,7 +22,7 @@ pub struct BlobResponder(Vec<u8>, Header<'static>, Header<'static>, Header<'stat
 async fn inner_get_blob(
     did: String,
     cid: String,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     auth: OptionalAccessOrAdminToken,
     db: DbConn,
     account_manager: AccountManager,
@@ -35,10 +35,14 @@ async fn inner_get_blob(
     let _ = assert_repo_availability(&did, is_user_or_admin, &account_manager).await?;
 
     let cid = Cid::from_str(&cid)?;
-    let actor_store = ActorStore::new(did.clone(), S3BlobStore::new(did.clone(), s3_config), db);
+    let actor_store = ActorStore::new(
+        did.clone(),
+        BlobStoreFs::new(did.clone(), blob_config.inner().clone()),
+        db,
+    );
 
     let found = actor_store.blob.get_blob(cid).await?;
-    let buf: AggregatedBytes = found.stream.collect().await?;
+    let buf: Bytes = found.stream.collect().await?;
     Ok((buf.to_vec(), found.mime_type))
 }
 
@@ -49,12 +53,12 @@ async fn inner_get_blob(
 pub async fn get_blob(
     did: String,
     cid: String,
-    s3_config: &State<SdkConfig>,
+    blob_config: &State<PathBuf>,
     auth: OptionalAccessOrAdminToken,
     db: DbConn,
     account_manager: AccountManager,
 ) -> Result<BlobResponder, ApiError> {
-    match inner_get_blob(did, cid, s3_config, auth, db, account_manager).await {
+    match inner_get_blob(did, cid, blob_config, auth, db, account_manager).await {
         Ok(res) => {
             let (bytes, mime_type) = res;
             Ok(BlobResponder(

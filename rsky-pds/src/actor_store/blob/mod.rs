@@ -1,10 +1,8 @@
-use crate::actor_store::aws::s3::S3BlobStore;
 use crate::db::DbConn;
 use crate::image;
 use crate::models::models;
 use anyhow::{bail, Result};
 use aws_sdk_s3::operation::get_object::GetObjectError;
-use aws_sdk_s3::primitives::ByteStream;
 use diesel::dsl::{count_distinct, exists, not};
 use diesel::result::Error;
 use diesel::sql_types::{Integer, Nullable, Text};
@@ -24,6 +22,9 @@ use rsky_repo::types::{PreparedBlobRef, PreparedWrite};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
 
+pub mod fs;
+use fs::{BlobStoreFs, ByteStream};
+
 pub struct BlobMetadata {
     pub temp_key: String,
     pub size: i64,
@@ -34,7 +35,7 @@ pub struct BlobMetadata {
 }
 
 pub struct BlobReader {
-    pub blobstore: S3BlobStore,
+    pub blobstore: BlobStoreFs,
     pub did: String,
     pub db: Arc<DbConn>,
 }
@@ -63,7 +64,7 @@ pub struct GetBlobMetadataOutput {
 
 // Basically handles getting blob records from db
 impl BlobReader {
-    pub fn new(blobstore: S3BlobStore, db: Arc<DbConn>) -> Self {
+    pub fn new(blobstore: BlobStoreFs, db: Arc<DbConn>) -> Self {
         BlobReader {
             did: blobstore.bucket.clone(),
             blobstore,
@@ -146,8 +147,9 @@ impl BlobReader {
         let bytes = blob_stream.into_bytes().await?;
         let size = bytes.n.written;
         let bytes = bytes.into_inner();
+        let rocket_bytes: rocket::http::hyper::body::Bytes = bytes.clone().into();
         let (temp_key, sha256, img_info, sniffed_mime) = try_join!(
-            self.blobstore.put_temp(bytes.clone()),
+            self.blobstore.put_temp(rocket_bytes),
             sha256_stream(bytes.clone()),
             image::maybe_get_info(bytes.clone()),
             image::mime_type_from_bytes(bytes.clone())
