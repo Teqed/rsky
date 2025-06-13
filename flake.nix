@@ -106,7 +106,6 @@
             src = fileSetForCrate ./rsky-pds;
             postInstall = ''
               mkdir -p $out/{bin,lib/rsky-pds}
-              mkdir -p /var/lib/rsky-pds
             '';
           });
         rsky-common = craneLib.buildPackage (
@@ -446,6 +445,7 @@
                     '';
                     authentication = pkgs.lib.mkOverride 10 ''
                       #type database  DBuser  auth-method optional_ident_map
+                      local postgres  postgres peer       map=superuser_map
                       local pds       pds     peer        map=superuser_map
                     '';
                   package = mkForce pkgs.postgresql_16;
