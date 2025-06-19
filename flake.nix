@@ -47,6 +47,7 @@
             pkgs.libpq
             pkgs.clang
             pkgs.libclang
+            pkgs.lld
           ] ++ lib.optionals pkgs.stdenv.isDarwin [
             # Additional darwin specific inputs can be set here
             pkgs.libiconv
@@ -217,6 +218,8 @@
 
           # Extra inputs can be added here; cargo and rustc are provided by default.
           packages = with pkgs; [
+            openssl
+            gcc
             sqlx-cli
             bacon
             sqlite
