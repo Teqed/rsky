@@ -1,0 +1,31 @@
+[AppBskyActorProfile.defs.main.record.properties.avatar]
+type = "blob"
+description = "Small image to be displayed next to posts from account. AKA, 'profile picture'"
+accept = ["image/png", "image/jpeg"]
+maxSize = 1_000_000
+
+[AppBskyActorProfile.defs.main.record.properties.banner]
+type = "blob"
+description = "Larger horizontal image to display behind profile view."
+accept = ["image/png", "image/jpeg"]
+maxSize = 1_000_000
+
+[AppBskyFeedGenerator.defs.main.record.properties.avatar]
+type = "blob"
+accept = ["image/png", "image/jpeg"]
+maxSize = 1_000_000
+
+[AppBskyGraphList.defs.main.record.properties.avatar]
+type = "blob"
+accept = ["image/png", "image/jpeg"]
+maxSize = 1_000_000
+
+[AppBskyEmbedImages.defs.image.properties.image]
+type = "blob"
+accept = ["image/*"]
+maxSize = 1_000_000
+
+[AppBskyEmbedExternal.defs.external.properties.thumb]
+type = "blob"
+accept = ["image/*"]
+maxSize = 1_000_000

@@ -1,5 +1,5 @@
 [workspace]
-members = [ "rsky-common", "rsky-crypto","rsky-feedgen", "rsky-firehose", "rsky-identity", "rsky-labeler", "rsky-lexicon", "rsky-pds", "rsky-syntax", "rsky-jetstream-subscriber", "rsky-repo", "cypher/backend", "cypher/frontend", "rsky-satnav", "rsky-relay"]
+members = [ "rsky-common", "rsky-crypto","rsky-feedgen", "rsky-firehose", "rsky-identity", "rsky-labeler", "rsky-lexicon", "rsky-pds", "rsky-pds-accountmanager", "rsky-pds-actorstore", "rsky-pds-common", "rsky-pds-models", "rsky-syntax", "rsky-jetstream-subscriber", "rsky-repo", "cypher/backend", "cypher/frontend", "rsky-satnav", "rsky-relay"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -19,6 +19,10 @@ secp256k1 = { version = "0.28.2", features = ["global-context", "serde", "rand",
 serde_json = { version = "1.0.96",features = ["preserve_order"] }
 rsky-lexicon = {path = "rsky-lexicon", version = "0.2.8"}
 rsky-identity = {path = "rsky-identity", version = "0.1.0"}
+rsky-pds-actorstore = {path = "rsky-pds-actorstore", version = "0.1.1"}
+rsky-pds-accountmanager = {path = "rsky-pds-accountmanager", version = "0.1.1"}
+rsky-pds-common = {path = "rsky-pds-common", version = "0.1.1"}
+rsky-pds-models = {path = "rsky-pds-models", version = "0.1.1"}
 rsky-crypto = {path = "rsky-crypto", version = "0.1.1"}
 rsky-syntax = {path = "rsky-syntax", version = "0.1.0"}
 rsky-common = {path = "rsky-common", version = "0.1.2"}
@@ -26,7 +30,7 @@ rsky-repo = {path = "rsky-repo", version = "0.0.2"}
 rsky-firehose = {path = "rsky-firehose", version = "0.2.1"}
 
 [profile.release]
-debug = 2  # Or any level from 0 to 2
+debug = 0  # Or any level from 0 to 2
 
 [profile.wasm-dev]
 inherits = "dev"

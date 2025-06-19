@@ -8,7 +8,7 @@ id = "com.atproto.admin.defs"
 
 [ComAtprotoAdminDefs.defs.statusAttr]
 type = "object"
-required = [ "applied" ]
+required = ["applied"]
 
 [ComAtprotoAdminDefs.defs.statusAttr.properties.applied]
 type = "boolean"
@@ -18,7 +18,7 @@ type = "string"
 
 [ComAtprotoAdminDefs.defs.accountView]
 type = "object"
-required = [ "did", "handle", "indexedAt" ]
+required = ["did", "handle", "indexedAt"]
 
 [ComAtprotoAdminDefs.defs.accountView.properties.did]
 type = "string"
@@ -64,7 +64,7 @@ type = "string"
 
 [ComAtprotoAdminDefs.defs.repoRef]
 type = "object"
-required = [ "did" ]
+required = ["did"]
 
 [ComAtprotoAdminDefs.defs.repoRef.properties.did]
 type = "string"
@@ -72,7 +72,7 @@ format = "did"
 
 [ComAtprotoAdminDefs.defs.repoBlobRef]
 type = "object"
-required = [ "did", "cid" ]
+required = ["did", "cid"]
 
 [ComAtprotoAdminDefs.defs.repoBlobRef.properties.did]
 type = "string"
@@ -99,7 +99,7 @@ encoding = "application/json"
 
 [ComAtprotoAdminDeleteAccount.defs.main.input.schema]
 type = "object"
-required = [ "did" ]
+required = ["did"]
 
 [ComAtprotoAdminDeleteAccount.defs.main.input.schema.properties.did]
 type = "string"
@@ -118,7 +118,7 @@ encoding = "application/json"
 
 [ComAtprotoAdminDisableAccountInvites.defs.main.input.schema]
 type = "object"
-required = [ "account" ]
+required = ["account"]
 
 [ComAtprotoAdminDisableAccountInvites.defs.main.input.schema.properties.account]
 type = "string"
@@ -167,7 +167,7 @@ encoding = "application/json"
 
 [ComAtprotoAdminEnableAccountInvites.defs.main.input.schema]
 type = "object"
-required = [ "account" ]
+required = ["account"]
 
 [ComAtprotoAdminEnableAccountInvites.defs.main.input.schema.properties.account]
 type = "string"
@@ -187,7 +187,7 @@ description = "Get details about an account."
 
 [ComAtprotoAdminGetAccountInfo.defs.main.parameters]
 type = "params"
-required = [ "did" ]
+required = ["did"]
 
 [ComAtprotoAdminGetAccountInfo.defs.main.parameters.properties.did]
 type = "string"
@@ -210,7 +210,7 @@ description = "Get details about some accounts."
 
 [ComAtprotoAdminGetAccountInfos.defs.main.parameters]
 type = "params"
-required = [ "dids" ]
+required = ["dids"]
 
 [ComAtprotoAdminGetAccountInfos.defs.main.parameters.properties.dids]
 type = "array"
@@ -224,7 +224,7 @@ encoding = "application/json"
 
 [ComAtprotoAdminGetAccountInfos.defs.main.output.schema]
 type = "object"
-required = [ "infos" ]
+required = ["infos"]
 
 [ComAtprotoAdminGetAccountInfos.defs.main.output.schema.properties.infos]
 type = "array"
@@ -246,7 +246,7 @@ type = "params"
 
 [ComAtprotoAdminGetInviteCodes.defs.main.parameters.properties.sort]
 type = "string"
-knownValues = [ "recent", "usage" ]
+knownValues = ["recent", "usage"]
 default = "recent"
 
 [ComAtprotoAdminGetInviteCodes.defs.main.parameters.properties.limit]
@@ -263,7 +263,7 @@ encoding = "application/json"
 
 [ComAtprotoAdminGetInviteCodes.defs.main.output.schema]
 type = "object"
-required = [ "codes" ]
+required = ["codes"]
 
 [ComAtprotoAdminGetInviteCodes.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -303,14 +303,14 @@ encoding = "application/json"
 
 [ComAtprotoAdminGetSubjectStatus.defs.main.output.schema]
 type = "object"
-required = [ "subject" ]
+required = ["subject"]
 
 [ComAtprotoAdminGetSubjectStatus.defs.main.output.schema.properties.subject]
 type = "union"
 refs = [
     "lex:com.atproto.admin.defs#repoRef",
     "lex:com.atproto.repo.strongRef",
-    "lex:com.atproto.admin.defs#repoBlobRef"
+    "lex:com.atproto.admin.defs#repoBlobRef",
 ]
 
 [ComAtprotoAdminGetSubjectStatus.defs.main.output.schema.properties.takedown]
@@ -330,7 +330,7 @@ encoding = "application/json"
 
 [ComAtprotoAdminSendEmail.defs.main.input.schema]
 type = "object"
-required = [ "recipientDid", "content", "senderDid" ]
+required = ["recipientDid", "content", "senderDid"]
 
 [ComAtprotoAdminSendEmail.defs.main.input.schema.properties.recipientDid]
 type = "string"
@@ -355,7 +355,7 @@ encoding = "application/json"
 
 [ComAtprotoAdminSendEmail.defs.main.output.schema]
 type = "object"
-required = [ "sent" ]
+required = ["sent"]
 
 [ComAtprotoAdminSendEmail.defs.main.output.schema.properties.sent]
 type = "boolean"
@@ -373,7 +373,7 @@ encoding = "application/json"
 
 [ComAtprotoAdminUpdateAccountEmail.defs.main.input.schema]
 type = "object"
-required = [ "account", "email" ]
+required = ["account", "email"]
 
 [ComAtprotoAdminUpdateAccountEmail.defs.main.input.schema.properties.account]
 type = "string"
@@ -396,7 +396,7 @@ encoding = "application/json"
 
 [ComAtprotoAdminUpdateAccountHandle.defs.main.input.schema]
 type = "object"
-required = [ "did", "handle" ]
+required = ["did", "handle"]
 
 [ComAtprotoAdminUpdateAccountHandle.defs.main.input.schema.properties.did]
 type = "string"
@@ -419,7 +419,7 @@ encoding = "application/json"
 
 [ComAtprotoAdminUpdateAccountPassword.defs.main.input.schema]
 type = "object"
-required = [ "did", "password" ]
+required = ["did", "password"]
 
 [ComAtprotoAdminUpdateAccountPassword.defs.main.input.schema.properties.did]
 type = "string"
@@ -441,14 +441,14 @@ encoding = "application/json"
 
 [ComAtprotoAdminUpdateSubjectStatus.defs.main.input.schema]
 type = "object"
-required = [ "subject" ]
+required = ["subject"]
 
 [ComAtprotoAdminUpdateSubjectStatus.defs.main.input.schema.properties.subject]
 type = "union"
 refs = [
     "lex:com.atproto.admin.defs#repoRef",
     "lex:com.atproto.repo.strongRef",
-    "lex:com.atproto.admin.defs#repoBlobRef"
+    "lex:com.atproto.admin.defs#repoBlobRef",
 ]
 
 [ComAtprotoAdminUpdateSubjectStatus.defs.main.input.schema.properties.takedown]
@@ -460,14 +460,14 @@ encoding = "application/json"
 
 [ComAtprotoAdminUpdateSubjectStatus.defs.main.output.schema]
 type = "object"
-required = [ "subject" ]
+required = ["subject"]
 
 [ComAtprotoAdminUpdateSubjectStatus.defs.main.output.schema.properties.subject]
 type = "union"
 refs = [
     "lex:com.atproto.admin.defs#repoRef",
     "lex:com.atproto.repo.strongRef",
-    "lex:com.atproto.admin.defs#repoBlobRef"
+    "lex:com.atproto.admin.defs#repoBlobRef",
 ]
 
 [ComAtprotoAdminUpdateSubjectStatus.defs.main.output.schema.properties.takedown]
@@ -525,7 +525,7 @@ description = "Resolves a handle (domain name) to a DID."
 
 [ComAtprotoIdentityResolveHandle.defs.main.parameters]
 type = "params"
-required = [ "handle" ]
+required = ["handle"]
 
 [ComAtprotoIdentityResolveHandle.defs.main.parameters.properties.handle]
 type = "string"
@@ -537,7 +537,7 @@ encoding = "application/json"
 
 [ComAtprotoIdentityResolveHandle.defs.main.output.schema]
 type = "object"
-required = [ "did" ]
+required = ["did"]
 
 [ComAtprotoIdentityResolveHandle.defs.main.output.schema.properties.did]
 type = "string"
@@ -584,7 +584,7 @@ encoding = "application/json"
 
 [ComAtprotoIdentitySignPlcOperation.defs.main.output.schema]
 type = "object"
-required = [ "operation" ]
+required = ["operation"]
 
 [ComAtprotoIdentitySignPlcOperation.defs.main.output.schema.properties.operation]
 type = "unknown"
@@ -603,7 +603,7 @@ encoding = "application/json"
 
 [ComAtprotoIdentitySubmitPlcOperation.defs.main.input.schema]
 type = "object"
-required = [ "operation" ]
+required = ["operation"]
 
 [ComAtprotoIdentitySubmitPlcOperation.defs.main.input.schema.properties.operation]
 type = "unknown"
@@ -621,7 +621,7 @@ encoding = "application/json"
 
 [ComAtprotoIdentityUpdateHandle.defs.main.input.schema]
 type = "object"
-required = [ "handle" ]
+required = ["handle"]
 
 [ComAtprotoIdentityUpdateHandle.defs.main.input.schema.properties.handle]
 type = "string"
@@ -635,7 +635,7 @@ id = "com.atproto.label.defs"
 [ComAtprotoLabelDefs.defs.label]
 type = "object"
 description = "Metadata tag on an atproto resource (eg, repo or record)."
-required = [ "src", "uri", "val", "cts" ]
+required = ["src", "uri", "val", "cts"]
 
 [ComAtprotoLabelDefs.defs.label.properties.ver]
 type = "integer"
@@ -682,7 +682,7 @@ description = "Signature of dag-cbor encoded label."
 [ComAtprotoLabelDefs.defs.selfLabels]
 type = "object"
 description = "Metadata tags on an atproto record, published by the author within the record."
-required = [ "values" ]
+required = ["values"]
 
 [ComAtprotoLabelDefs.defs.selfLabels.properties.values]
 type = "array"
@@ -695,7 +695,7 @@ ref = "lex:com.atproto.label.defs#selfLabel"
 [ComAtprotoLabelDefs.defs.selfLabel]
 type = "object"
 description = "Metadata tag on an atproto record, published by the author within the record. Note that schemas should use #selfLabels, not #selfLabel."
-required = [ "val" ]
+required = ["val"]
 
 [ComAtprotoLabelDefs.defs.selfLabel.properties.val]
 type = "string"
@@ -705,7 +705,7 @@ description = "The short string name of the value or type of this label."
 [ComAtprotoLabelDefs.defs.labelValueDefinition]
 type = "object"
 description = "Declares a label value and its expected interpertations and behaviors."
-required = [ "identifier", "severity", "blurs", "locales" ]
+required = ["identifier", "severity", "blurs", "locales"]
 
 [ComAtprotoLabelDefs.defs.labelValueDefinition.properties.identifier]
 type = "string"
@@ -716,17 +716,17 @@ maxGraphemes = 100
 [ComAtprotoLabelDefs.defs.labelValueDefinition.properties.severity]
 type = "string"
 description = "How should a client visually convey this label? 'inform' means neutral and informational; 'alert' means negative and warning; 'none' means show nothing."
-knownValues = [ "inform", "alert", "none" ]
+knownValues = ["inform", "alert", "none"]
 
 [ComAtprotoLabelDefs.defs.labelValueDefinition.properties.blurs]
 type = "string"
 description = "What should this label hide in the UI, if applied? 'content' hides all of the target; 'media' hides the images/video/audio; 'none' hides nothing."
-knownValues = [ "content", "media", "none" ]
+knownValues = ["content", "media", "none"]
 
 [ComAtprotoLabelDefs.defs.labelValueDefinition.properties.defaultSetting]
 type = "string"
 description = "The default setting for this label."
-knownValues = [ "ignore", "warn", "hide" ]
+knownValues = ["ignore", "warn", "hide"]
 default = "warn"
 
 [ComAtprotoLabelDefs.defs.labelValueDefinition.properties.adultOnly]
@@ -743,7 +743,7 @@ ref = "lex:com.atproto.label.defs#labelValueDefinitionStrings"
 [ComAtprotoLabelDefs.defs.labelValueDefinitionStrings]
 type = "object"
 description = "Strings which describe the label in the UI, localized into a specific language."
-required = [ "lang", "name", "description" ]
+required = ["lang", "name", "description"]
 
 [ComAtprotoLabelDefs.defs.labelValueDefinitionStrings.properties.lang]
 type = "string"
@@ -775,7 +775,7 @@ knownValues = [
     "sexual",
     "nudity",
     "nsfl",
-    "gore"
+    "gore",
 ]
 
 [ComAtprotoLabelQueryLabels]
@@ -788,7 +788,7 @@ description = "Find labels relevant to the provided AT-URI patterns. Public endp
 
 [ComAtprotoLabelQueryLabels.defs.main.parameters]
 type = "params"
-required = [ "uriPatterns" ]
+required = ["uriPatterns"]
 
 [ComAtprotoLabelQueryLabels.defs.main.parameters.properties.uriPatterns]
 type = "array"
@@ -819,7 +819,7 @@ encoding = "application/json"
 
 [ComAtprotoLabelQueryLabels.defs.main.output.schema]
 type = "object"
-required = [ "labels" ]
+required = ["labels"]
 
 [ComAtprotoLabelQueryLabels.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -850,7 +850,7 @@ description = "The last known event seq number to backfill from."
 type = "union"
 refs = [
     "lex:com.atproto.label.subscribeLabels#labels",
-    "lex:com.atproto.label.subscribeLabels#info"
+    "lex:com.atproto.label.subscribeLabels#info",
 ]
 
 [[ComAtprotoLabelSubscribeLabels.defs.main.errors]]
@@ -858,7 +858,7 @@ name = "FutureCursor"
 
 [ComAtprotoLabelSubscribeLabels.defs.labels]
 type = "object"
-required = [ "seq", "labels" ]
+required = ["seq", "labels"]
 
 [ComAtprotoLabelSubscribeLabels.defs.labels.properties.seq]
 type = "integer"
@@ -872,11 +872,11 @@ ref = "lex:com.atproto.label.defs#label"
 
 [ComAtprotoLabelSubscribeLabels.defs.info]
 type = "object"
-required = [ "name" ]
+required = ["name"]
 
 [ComAtprotoLabelSubscribeLabels.defs.info.properties.name]
 type = "string"
-knownValues = [ "OutdatedCursor" ]
+knownValues = ["OutdatedCursor"]
 
 [ComAtprotoLabelSubscribeLabels.defs.info.properties.message]
 type = "string"
@@ -894,7 +894,7 @@ encoding = "application/json"
 
 [ComAtprotoModerationCreateReport.defs.main.input.schema]
 type = "object"
-required = [ "reasonType", "subject" ]
+required = ["reasonType", "subject"]
 
 [ComAtprotoModerationCreateReport.defs.main.input.schema.properties.reasonType]
 type = "ref"
@@ -909,17 +909,14 @@ description = "Additional context about the content and violation."
 
 [ComAtprotoModerationCreateReport.defs.main.input.schema.properties.subject]
 type = "union"
-refs = [
-    "lex:com.atproto.admin.defs#repoRef",
-    "lex:com.atproto.repo.strongRef"
-]
+refs = ["lex:com.atproto.admin.defs#repoRef", "lex:com.atproto.repo.strongRef"]
 
 [ComAtprotoModerationCreateReport.defs.main.output]
 encoding = "application/json"
 
 [ComAtprotoModerationCreateReport.defs.main.output.schema]
 type = "object"
-required = [ "id", "reasonType", "subject", "reportedBy", "createdAt" ]
+required = ["id", "reasonType", "subject", "reportedBy", "createdAt"]
 
 [ComAtprotoModerationCreateReport.defs.main.output.schema.properties.id]
 type = "integer"
@@ -935,10 +932,7 @@ maxLength = 20_000
 
 [ComAtprotoModerationCreateReport.defs.main.output.schema.properties.subject]
 type = "union"
-refs = [
-    "lex:com.atproto.admin.defs#repoRef",
-    "lex:com.atproto.repo.strongRef"
-]
+refs = ["lex:com.atproto.admin.defs#repoRef", "lex:com.atproto.repo.strongRef"]
 
 [ComAtprotoModerationCreateReport.defs.main.output.schema.properties.reportedBy]
 type = "string"
@@ -961,7 +955,7 @@ knownValues = [
     "com.atproto.moderation.defs#reasonSexual",
     "com.atproto.moderation.defs#reasonRude",
     "com.atproto.moderation.defs#reasonOther",
-    "com.atproto.moderation.defs#reasonAppeal"
+    "com.atproto.moderation.defs#reasonAppeal",
 ]
 
 [ComAtprotoModerationDefs.defs.reasonSpam]
@@ -1005,7 +999,7 @@ encoding = "application/json"
 
 [ComAtprotoRepoApplyWrites.defs.main.input.schema]
 type = "object"
-required = [ "repo", "writes" ]
+required = ["repo", "writes"]
 
 [ComAtprotoRepoApplyWrites.defs.main.input.schema.properties.repo]
 type = "string"
@@ -1025,7 +1019,7 @@ type = "union"
 refs = [
     "lex:com.atproto.repo.applyWrites#create",
     "lex:com.atproto.repo.applyWrites#update",
-    "lex:com.atproto.repo.applyWrites#delete"
+    "lex:com.atproto.repo.applyWrites#delete",
 ]
 closed = true
 
@@ -1041,7 +1035,7 @@ description = "Indicates that the 'swapCommit' parameter did not match current c
 [ComAtprotoRepoApplyWrites.defs.create]
 type = "object"
 description = "Operation which creates a new record."
-required = [ "collection", "value" ]
+required = ["collection", "value"]
 
 [ComAtprotoRepoApplyWrites.defs.create.properties.collection]
 type = "string"
@@ -1057,7 +1051,7 @@ type = "unknown"
 [ComAtprotoRepoApplyWrites.defs.update]
 type = "object"
 description = "Operation which updates an existing record."
-required = [ "collection", "rkey", "value" ]
+required = ["collection", "rkey", "value"]
 
 [ComAtprotoRepoApplyWrites.defs.update.properties.collection]
 type = "string"
@@ -1072,7 +1066,7 @@ type = "unknown"
 [ComAtprotoRepoApplyWrites.defs.delete]
 type = "object"
 description = "Operation which deletes an existing record."
-required = [ "collection", "rkey" ]
+required = ["collection", "rkey"]
 
 [ComAtprotoRepoApplyWrites.defs.delete.properties.collection]
 type = "string"
@@ -1094,7 +1088,7 @@ encoding = "application/json"
 
 [ComAtprotoRepoCreateRecord.defs.main.input.schema]
 type = "object"
-required = [ "repo", "collection", "record" ]
+required = ["repo", "collection", "record"]
 
 [ComAtprotoRepoCreateRecord.defs.main.input.schema.properties.repo]
 type = "string"
@@ -1130,7 +1124,7 @@ encoding = "application/json"
 
 [ComAtprotoRepoCreateRecord.defs.main.output.schema]
 type = "object"
-required = [ "uri", "cid" ]
+required = ["uri", "cid"]
 
 [ComAtprotoRepoCreateRecord.defs.main.output.schema.properties.uri]
 type = "string"
@@ -1157,7 +1151,7 @@ encoding = "application/json"
 
 [ComAtprotoRepoDeleteRecord.defs.main.input.schema]
 type = "object"
-required = [ "repo", "collection", "rkey" ]
+required = ["repo", "collection", "rkey"]
 
 [ComAtprotoRepoDeleteRecord.defs.main.input.schema.properties.repo]
 type = "string"
@@ -1196,7 +1190,7 @@ description = "Get information about an account and repository, including the li
 
 [ComAtprotoRepoDescribeRepo.defs.main.parameters]
 type = "params"
-required = [ "repo" ]
+required = ["repo"]
 
 [ComAtprotoRepoDescribeRepo.defs.main.parameters.properties.repo]
 type = "string"
@@ -1208,7 +1202,7 @@ encoding = "application/json"
 
 [ComAtprotoRepoDescribeRepo.defs.main.output.schema]
 type = "object"
-required = [ "handle", "did", "didDoc", "collections", "handleIsCorrect" ]
+required = ["handle", "did", "didDoc", "collections", "handleIsCorrect"]
 
 [ComAtprotoRepoDescribeRepo.defs.main.output.schema.properties.handle]
 type = "string"
@@ -1244,7 +1238,7 @@ description = "Get a single record from a repository. Does not require auth."
 
 [ComAtprotoRepoGetRecord.defs.main.parameters]
 type = "params"
-required = [ "repo", "collection", "rkey" ]
+required = ["repo", "collection", "rkey"]
 
 [ComAtprotoRepoGetRecord.defs.main.parameters.properties.repo]
 type = "string"
@@ -1270,7 +1264,7 @@ encoding = "application/json"
 
 [ComAtprotoRepoGetRecord.defs.main.output.schema]
 type = "object"
-required = [ "uri", "value" ]
+required = ["uri", "value"]
 
 [ComAtprotoRepoGetRecord.defs.main.output.schema.properties.uri]
 type = "string"
@@ -1319,7 +1313,7 @@ encoding = "application/json"
 
 [ComAtprotoRepoListMissingBlobs.defs.main.output.schema]
 type = "object"
-required = [ "blobs" ]
+required = ["blobs"]
 
 [ComAtprotoRepoListMissingBlobs.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -1333,7 +1327,7 @@ ref = "lex:com.atproto.repo.listMissingBlobs#recordBlob"
 
 [ComAtprotoRepoListMissingBlobs.defs.recordBlob]
 type = "object"
-required = [ "cid", "recordUri" ]
+required = ["cid", "recordUri"]
 
 [ComAtprotoRepoListMissingBlobs.defs.recordBlob.properties.cid]
 type = "string"
@@ -1353,7 +1347,7 @@ description = "List a range of records in a repository, matching a specific coll
 
 [ComAtprotoRepoListRecords.defs.main.parameters]
 type = "params"
-required = [ "repo", "collection" ]
+required = ["repo", "collection"]
 
 [ComAtprotoRepoListRecords.defs.main.parameters.properties.repo]
 type = "string"
@@ -1392,7 +1386,7 @@ encoding = "application/json"
 
 [ComAtprotoRepoListRecords.defs.main.output.schema]
 type = "object"
-required = [ "records" ]
+required = ["records"]
 
 [ComAtprotoRepoListRecords.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -1406,7 +1400,7 @@ ref = "lex:com.atproto.repo.listRecords#record"
 
 [ComAtprotoRepoListRecords.defs.record]
 type = "object"
-required = [ "uri", "cid", "value" ]
+required = ["uri", "cid", "value"]
 
 [ComAtprotoRepoListRecords.defs.record.properties.uri]
 type = "string"
@@ -1432,8 +1426,8 @@ encoding = "application/json"
 
 [ComAtprotoRepoPutRecord.defs.main.input.schema]
 type = "object"
-required = [ "repo", "collection", "rkey", "record" ]
-nullable = [ "swapRecord" ]
+required = ["repo", "collection", "rkey", "record"]
+nullable = ["swapRecord"]
 
 [ComAtprotoRepoPutRecord.defs.main.input.schema.properties.repo]
 type = "string"
@@ -1474,7 +1468,7 @@ encoding = "application/json"
 
 [ComAtprotoRepoPutRecord.defs.main.output.schema]
 type = "object"
-required = [ "uri", "cid" ]
+required = ["uri", "cid"]
 
 [ComAtprotoRepoPutRecord.defs.main.output.schema.properties.uri]
 type = "string"
@@ -1494,7 +1488,7 @@ description = "A URI with a content-hash fingerprint."
 
 [ComAtprotoRepoStrongRef.defs.main]
 type = "object"
-required = [ "uri", "cid" ]
+required = ["uri", "cid"]
 
 [ComAtprotoRepoStrongRef.defs.main.properties.uri]
 type = "string"
@@ -1520,7 +1514,7 @@ encoding = "application/json"
 
 [ComAtprotoRepoUploadBlob.defs.main.output.schema]
 type = "object"
-required = [ "blob" ]
+required = ["blob"]
 
 [ComAtprotoRepoUploadBlob.defs.main.output.schema.properties.blob]
 type = "blob"
@@ -1555,7 +1549,7 @@ required = [
     "indexedRecords",
     "privateStateValues",
     "expectedBlobs",
-    "importedBlobs"
+    "importedBlobs",
 ]
 
 [ComAtprotoServerCheckAccountStatus.defs.main.output.schema.properties.activated]
@@ -1599,7 +1593,7 @@ encoding = "application/json"
 
 [ComAtprotoServerConfirmEmail.defs.main.input.schema]
 type = "object"
-required = [ "email", "token" ]
+required = ["email", "token"]
 
 [ComAtprotoServerConfirmEmail.defs.main.input.schema.properties.email]
 type = "string"
@@ -1632,7 +1626,7 @@ encoding = "application/json"
 
 [ComAtprotoServerCreateAccount.defs.main.input.schema]
 type = "object"
-required = [ "handle" ]
+required = ["handle"]
 
 [ComAtprotoServerCreateAccount.defs.main.input.schema.properties.email]
 type = "string"
@@ -1674,7 +1668,7 @@ encoding = "application/json"
 [ComAtprotoServerCreateAccount.defs.main.output.schema]
 type = "object"
 description = "Account login session returned on successful account creation."
-required = [ "accessJwt", "refreshJwt", "handle", "did" ]
+required = ["accessJwt", "refreshJwt", "handle", "did"]
 
 [ComAtprotoServerCreateAccount.defs.main.output.schema.properties.accessJwt]
 type = "string"
@@ -1729,7 +1723,7 @@ encoding = "application/json"
 
 [ComAtprotoServerCreateAppPassword.defs.main.input.schema]
 type = "object"
-required = [ "name" ]
+required = ["name"]
 
 [ComAtprotoServerCreateAppPassword.defs.main.input.schema.properties.name]
 type = "string"
@@ -1747,7 +1741,7 @@ name = "AccountTakedown"
 
 [ComAtprotoServerCreateAppPassword.defs.appPassword]
 type = "object"
-required = [ "name", "password", "createdAt" ]
+required = ["name", "password", "createdAt"]
 
 [ComAtprotoServerCreateAppPassword.defs.appPassword.properties.name]
 type = "string"
@@ -1772,7 +1766,7 @@ encoding = "application/json"
 
 [ComAtprotoServerCreateInviteCode.defs.main.input.schema]
 type = "object"
-required = [ "useCount" ]
+required = ["useCount"]
 
 [ComAtprotoServerCreateInviteCode.defs.main.input.schema.properties.useCount]
 type = "integer"
@@ -1786,7 +1780,7 @@ encoding = "application/json"
 
 [ComAtprotoServerCreateInviteCode.defs.main.output.schema]
 type = "object"
-required = [ "code" ]
+required = ["code"]
 
 [ComAtprotoServerCreateInviteCode.defs.main.output.schema.properties.code]
 type = "string"
@@ -1804,7 +1798,7 @@ encoding = "application/json"
 
 [ComAtprotoServerCreateInviteCodes.defs.main.input.schema]
 type = "object"
-required = [ "codeCount", "useCount" ]
+required = ["codeCount", "useCount"]
 
 [ComAtprotoServerCreateInviteCodes.defs.main.input.schema.properties.codeCount]
 type = "integer"
@@ -1825,7 +1819,7 @@ encoding = "application/json"
 
 [ComAtprotoServerCreateInviteCodes.defs.main.output.schema]
 type = "object"
-required = [ "codes" ]
+required = ["codes"]
 
 [ComAtprotoServerCreateInviteCodes.defs.main.output.schema.properties.codes]
 type = "array"
@@ -1836,7 +1830,7 @@ ref = "lex:com.atproto.server.createInviteCodes#accountCodes"
 
 [ComAtprotoServerCreateInviteCodes.defs.accountCodes]
 type = "object"
-required = [ "account", "codes" ]
+required = ["account", "codes"]
 
 [ComAtprotoServerCreateInviteCodes.defs.accountCodes.properties.account]
 type = "string"
@@ -1860,7 +1854,7 @@ encoding = "application/json"
 
 [ComAtprotoServerCreateSession.defs.main.input.schema]
 type = "object"
-required = [ "identifier", "password" ]
+required = ["identifier", "password"]
 
 [ComAtprotoServerCreateSession.defs.main.input.schema.properties.identifier]
 type = "string"
@@ -1874,7 +1868,7 @@ encoding = "application/json"
 
 [ComAtprotoServerCreateSession.defs.main.output.schema]
 type = "object"
-required = [ "accessJwt", "refreshJwt", "handle", "did" ]
+required = ["accessJwt", "refreshJwt", "handle", "did"]
 
 [ComAtprotoServerCreateSession.defs.main.output.schema.properties.accessJwt]
 type = "string"
@@ -1934,7 +1928,7 @@ required = [
     "forAccount",
     "createdBy",
     "createdAt",
-    "uses"
+    "uses",
 ]
 
 [ComAtprotoServerDefs.defs.inviteCode.properties.code]
@@ -1965,7 +1959,7 @@ ref = "lex:com.atproto.server.defs#inviteCodeUse"
 
 [ComAtprotoServerDefs.defs.inviteCodeUse]
 type = "object"
-required = [ "usedBy", "usedAt" ]
+required = ["usedBy", "usedAt"]
 
 [ComAtprotoServerDefs.defs.inviteCodeUse.properties.usedBy]
 type = "string"
@@ -1988,7 +1982,7 @@ encoding = "application/json"
 
 [ComAtprotoServerDeleteAccount.defs.main.input.schema]
 type = "object"
-required = [ "did", "password", "token" ]
+required = ["did", "password", "token"]
 
 [ComAtprotoServerDeleteAccount.defs.main.input.schema.properties.did]
 type = "string"
@@ -2027,7 +2021,7 @@ encoding = "application/json"
 
 [ComAtprotoServerDescribeServer.defs.main.output.schema]
 type = "object"
-required = [ "did", "availableUserDomains" ]
+required = ["did", "availableUserDomains"]
 
 [ComAtprotoServerDescribeServer.defs.main.output.schema.properties.inviteCodeRequired]
 type = "boolean"
@@ -2100,7 +2094,7 @@ encoding = "application/json"
 
 [ComAtprotoServerGetAccountInviteCodes.defs.main.output.schema]
 type = "object"
-required = [ "codes" ]
+required = ["codes"]
 
 [ComAtprotoServerGetAccountInviteCodes.defs.main.output.schema.properties.codes]
 type = "array"
@@ -2122,7 +2116,7 @@ description = "Get a signed token on behalf of the requesting DID for the reques
 
 [ComAtprotoServerGetServiceAuth.defs.main.parameters]
 type = "params"
-required = [ "aud" ]
+required = ["aud"]
 
 [ComAtprotoServerGetServiceAuth.defs.main.parameters.properties.aud]
 type = "string"
@@ -2134,7 +2128,7 @@ encoding = "application/json"
 
 [ComAtprotoServerGetServiceAuth.defs.main.output.schema]
 type = "object"
-required = [ "token" ]
+required = ["token"]
 
 [ComAtprotoServerGetServiceAuth.defs.main.output.schema.properties.token]
 type = "string"
@@ -2152,7 +2146,7 @@ encoding = "application/json"
 
 [ComAtprotoServerGetSession.defs.main.output.schema]
 type = "object"
-required = [ "handle", "did" ]
+required = ["handle", "did"]
 
 [ComAtprotoServerGetSession.defs.main.output.schema.properties.handle]
 type = "string"
@@ -2184,7 +2178,7 @@ encoding = "application/json"
 
 [ComAtprotoServerListAppPasswords.defs.main.output.schema]
 type = "object"
-required = [ "passwords" ]
+required = ["passwords"]
 
 [ComAtprotoServerListAppPasswords.defs.main.output.schema.properties.passwords]
 type = "array"
@@ -2198,7 +2192,7 @@ name = "AccountTakedown"
 
 [ComAtprotoServerListAppPasswords.defs.appPassword]
 type = "object"
-required = [ "name", "createdAt" ]
+required = ["name", "createdAt"]
 
 [ComAtprotoServerListAppPasswords.defs.appPassword.properties.name]
 type = "string"
@@ -2220,7 +2214,7 @@ encoding = "application/json"
 
 [ComAtprotoServerRefreshSession.defs.main.output.schema]
 type = "object"
-required = [ "accessJwt", "refreshJwt", "handle", "did" ]
+required = ["accessJwt", "refreshJwt", "handle", "did"]
 
 [ComAtprotoServerRefreshSession.defs.main.output.schema.properties.accessJwt]
 type = "string"
@@ -2271,7 +2265,7 @@ encoding = "application/json"
 
 [ComAtprotoServerRequestEmailUpdate.defs.main.output.schema]
 type = "object"
-required = [ "tokenRequired" ]
+required = ["tokenRequired"]
 
 [ComAtprotoServerRequestEmailUpdate.defs.main.output.schema.properties.tokenRequired]
 type = "boolean"
@@ -2289,7 +2283,7 @@ encoding = "application/json"
 
 [ComAtprotoServerRequestPasswordReset.defs.main.input.schema]
 type = "object"
-required = [ "email" ]
+required = ["email"]
 
 [ComAtprotoServerRequestPasswordReset.defs.main.input.schema.properties.email]
 type = "string"
@@ -2318,7 +2312,7 @@ encoding = "application/json"
 
 [ComAtprotoServerReserveSigningKey.defs.main.output.schema]
 type = "object"
-required = [ "signingKey" ]
+required = ["signingKey"]
 
 [ComAtprotoServerReserveSigningKey.defs.main.output.schema.properties.signingKey]
 type = "string"
@@ -2337,7 +2331,7 @@ encoding = "application/json"
 
 [ComAtprotoServerResetPassword.defs.main.input.schema]
 type = "object"
-required = [ "token", "password" ]
+required = ["token", "password"]
 
 [ComAtprotoServerResetPassword.defs.main.input.schema.properties.token]
 type = "string"
@@ -2364,7 +2358,7 @@ encoding = "application/json"
 
 [ComAtprotoServerRevokeAppPassword.defs.main.input.schema]
 type = "object"
-required = [ "name" ]
+required = ["name"]
 
 [ComAtprotoServerRevokeAppPassword.defs.main.input.schema.properties.name]
 type = "string"
@@ -2382,7 +2376,7 @@ encoding = "application/json"
 
 [ComAtprotoServerUpdateEmail.defs.main.input.schema]
 type = "object"
-required = [ "email" ]
+required = ["email"]
 
 [ComAtprotoServerUpdateEmail.defs.main.input.schema.properties.email]
 type = "string"
@@ -2410,7 +2404,7 @@ description = "Get a blob associated with a given account. Returns the full blob
 
 [ComAtprotoSyncGetBlob.defs.main.parameters]
 type = "params"
-required = [ "did", "cid" ]
+required = ["did", "cid"]
 
 [ComAtprotoSyncGetBlob.defs.main.parameters.properties.did]
 type = "string"
@@ -2435,7 +2429,7 @@ description = "Get data blocks from a given repo, by CID. For example, intermedi
 
 [ComAtprotoSyncGetBlocks.defs.main.parameters]
 type = "params"
-required = [ "did", "cids" ]
+required = ["did", "cids"]
 
 [ComAtprotoSyncGetBlocks.defs.main.parameters.properties.did]
 type = "string"
@@ -2462,7 +2456,7 @@ description = "DEPRECATED - please use com.atproto.sync.getRepo instead"
 
 [ComAtprotoSyncGetCheckout.defs.main.parameters]
 type = "params"
-required = [ "did" ]
+required = ["did"]
 
 [ComAtprotoSyncGetCheckout.defs.main.parameters.properties.did]
 type = "string"
@@ -2482,7 +2476,7 @@ description = "DEPRECATED - please use com.atproto.sync.getLatestCommit instead"
 
 [ComAtprotoSyncGetHead.defs.main.parameters]
 type = "params"
-required = [ "did" ]
+required = ["did"]
 
 [ComAtprotoSyncGetHead.defs.main.parameters.properties.did]
 type = "string"
@@ -2494,7 +2488,7 @@ encoding = "application/json"
 
 [ComAtprotoSyncGetHead.defs.main.output.schema]
 type = "object"
-required = [ "root" ]
+required = ["root"]
 
 [ComAtprotoSyncGetHead.defs.main.output.schema.properties.root]
 type = "string"
@@ -2513,7 +2507,7 @@ description = "Get the current commit CID & revision of the specified repo. Does
 
 [ComAtprotoSyncGetLatestCommit.defs.main.parameters]
 type = "params"
-required = [ "did" ]
+required = ["did"]
 
 [ComAtprotoSyncGetLatestCommit.defs.main.parameters.properties.did]
 type = "string"
@@ -2525,7 +2519,7 @@ encoding = "application/json"
 
 [ComAtprotoSyncGetLatestCommit.defs.main.output.schema]
 type = "object"
-required = [ "cid", "rev" ]
+required = ["cid", "rev"]
 
 [ComAtprotoSyncGetLatestCommit.defs.main.output.schema.properties.cid]
 type = "string"
@@ -2547,7 +2541,7 @@ description = "Get data blocks needed to prove the existence or non-existence of
 
 [ComAtprotoSyncGetRecord.defs.main.parameters]
 type = "params"
-required = [ "did", "collection", "rkey" ]
+required = ["did", "collection", "rkey"]
 
 [ComAtprotoSyncGetRecord.defs.main.parameters.properties.did]
 type = "string"
@@ -2580,7 +2574,7 @@ description = "Download a repository export as CAR file. Optionally only a 'diff
 
 [ComAtprotoSyncGetRepo.defs.main.parameters]
 type = "params"
-required = [ "did" ]
+required = ["did"]
 
 [ComAtprotoSyncGetRepo.defs.main.parameters.properties.did]
 type = "string"
@@ -2604,7 +2598,7 @@ description = "List blob CIDso for an account, since some repo revision. Does no
 
 [ComAtprotoSyncListBlobs.defs.main.parameters]
 type = "params"
-required = [ "did" ]
+required = ["did"]
 
 [ComAtprotoSyncListBlobs.defs.main.parameters.properties.did]
 type = "string"
@@ -2629,7 +2623,7 @@ encoding = "application/json"
 
 [ComAtprotoSyncListBlobs.defs.main.output.schema]
 type = "object"
-required = [ "cids" ]
+required = ["cids"]
 
 [ComAtprotoSyncListBlobs.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -2666,7 +2660,7 @@ encoding = "application/json"
 
 [ComAtprotoSyncListRepos.defs.main.output.schema]
 type = "object"
-required = [ "repos" ]
+required = ["repos"]
 
 [ComAtprotoSyncListRepos.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -2680,7 +2674,7 @@ ref = "lex:com.atproto.sync.listRepos#repo"
 
 [ComAtprotoSyncListRepos.defs.repo]
 type = "object"
-required = [ "did", "head", "rev" ]
+required = ["did", "head", "rev"]
 
 [ComAtprotoSyncListRepos.defs.repo.properties.did]
 type = "string"
@@ -2707,7 +2701,7 @@ encoding = "application/json"
 
 [ComAtprotoSyncNotifyOfUpdate.defs.main.input.schema]
 type = "object"
-required = [ "hostname" ]
+required = ["hostname"]
 
 [ComAtprotoSyncNotifyOfUpdate.defs.main.input.schema.properties.hostname]
 type = "string"
@@ -2726,7 +2720,7 @@ encoding = "application/json"
 
 [ComAtprotoSyncRequestCrawl.defs.main.input.schema]
 type = "object"
-required = [ "hostname" ]
+required = ["hostname"]
 
 [ComAtprotoSyncRequestCrawl.defs.main.input.schema.properties.hostname]
 type = "string"
@@ -2756,7 +2750,7 @@ refs = [
     "lex:com.atproto.sync.subscribeRepos#migrate",
     "lex:com.atproto.sync.subscribeRepos#sync",
     "lex:com.atproto.sync.subscribeRepos#tombstone",
-    "lex:com.atproto.sync.subscribeRepos#info"
+    "lex:com.atproto.sync.subscribeRepos#info",
 ]
 
 [[ComAtprotoSyncSubscribeRepos.defs.main.errors]]
@@ -2780,9 +2774,9 @@ required = [
     "blocks",
     "ops",
     "blobs",
-    "time"
+    "time",
 ]
-nullable = [ "prev", "since" ]
+nullable = ["prev", "since"]
 
 [ComAtprotoSyncSubscribeRepos.defs.commit.properties.seq]
 type = "integer"
@@ -2846,7 +2840,7 @@ description = "Timestamp of when this message was originally broadcast."
 [ComAtprotoSyncSubscribeRepos.defs.identity]
 type = "object"
 description = "Represents a change to an account's identity. Could be an updated handle, signing key, or pds hosting endpoint. Serves as a prod to all downstream services to refresh their identity cache."
-required = [ "seq", "did", "time" ]
+required = ["seq", "did", "time"]
 
 [ComAtprotoSyncSubscribeRepos.defs.identity.properties.seq]
 type = "integer"
@@ -2862,7 +2856,7 @@ format = "datetime"
 [ComAtprotoSyncSubscribeRepos.defs.handle]
 type = "object"
 description = "Represents an update of the account's handle, or transition to/from invalid state. NOTE: Will be deprecated in favor of #identity."
-required = [ "seq", "did", "handle", "time" ]
+required = ["seq", "did", "handle", "time"]
 
 [ComAtprotoSyncSubscribeRepos.defs.handle.properties.seq]
 type = "integer"
@@ -2882,8 +2876,8 @@ format = "datetime"
 [ComAtprotoSyncSubscribeRepos.defs.migrate]
 type = "object"
 description = "Represents an account moving from one PDS instance to another. NOTE: not implemented; account migration uses #identity instead"
-required = [ "seq", "did", "migrateTo", "time" ]
-nullable = [ "migrateTo" ]
+required = ["seq", "did", "migrateTo", "time"]
+nullable = ["migrateTo"]
 
 [ComAtprotoSyncSubscribeRepos.defs.migrate.properties.seq]
 type = "integer"
@@ -2902,7 +2896,7 @@ format = "datetime"
 [ComAtprotoSyncSubscribeRepos.defs.tombstone]
 type = "object"
 description = "Indicates that an account has been deleted. NOTE: may be deprecated in favor of #identity or a future #account event"
-required = [ "seq", "did", "time" ]
+required = ["seq", "did", "time"]
 
 [ComAtprotoSyncSubscribeRepos.defs.tombstone.properties.seq]
 type = "integer"
@@ -2917,11 +2911,11 @@ format = "datetime"
 
 [ComAtprotoSyncSubscribeRepos.defs.info]
 type = "object"
-required = [ "name" ]
+required = ["name"]
 
 [ComAtprotoSyncSubscribeRepos.defs.info.properties.name]
 type = "string"
-knownValues = [ "OutdatedCursor" ]
+knownValues = ["OutdatedCursor"]
 
 [ComAtprotoSyncSubscribeRepos.defs.info.properties.message]
 type = "string"
@@ -2929,12 +2923,12 @@ type = "string"
 [ComAtprotoSyncSubscribeRepos.defs.repoOp]
 type = "object"
 description = "A repo operation, ie a mutation of a single record."
-required = [ "action", "path", "cid" ]
-nullable = [ "cid" ]
+required = ["action", "path", "cid"]
+nullable = ["cid"]
 
 [ComAtprotoSyncSubscribeRepos.defs.repoOp.properties.action]
 type = "string"
-knownValues = [ "create", "update", "delete" ]
+knownValues = ["create", "update", "delete"]
 
 [ComAtprotoSyncSubscribeRepos.defs.repoOp.properties.path]
 type = "string"
@@ -2956,7 +2950,7 @@ encoding = "application/json"
 
 [ComAtprotoTempCheckSignupQueue.defs.main.output.schema]
 type = "object"
-required = [ "activated" ]
+required = ["activated"]
 
 [ComAtprotoTempCheckSignupQueue.defs.main.output.schema.properties.activated]
 type = "boolean"
@@ -2992,7 +2986,7 @@ encoding = "application/json"
 
 [ComAtprotoTempFetchLabels.defs.main.output.schema]
 type = "object"
-required = [ "labels" ]
+required = ["labels"]
 
 [ComAtprotoTempFetchLabels.defs.main.output.schema.properties.labels]
 type = "array"
@@ -3014,7 +3008,7 @@ encoding = "application/json"
 
 [ComAtprotoTempRequestPhoneVerification.defs.main.input.schema]
 type = "object"
-required = [ "phoneNumber" ]
+required = ["phoneNumber"]
 
 [ComAtprotoTempRequestPhoneVerification.defs.main.input.schema.properties.phoneNumber]
 type = "string"
@@ -3025,7 +3019,7 @@ id = "app.bsky.actor.defs"
 
 [AppBskyActorDefs.defs.profileViewBasic]
 type = "object"
-required = [ "did", "handle" ]
+required = ["did", "handle"]
 
 [AppBskyActorDefs.defs.profileViewBasic.properties.did]
 type = "string"
@@ -3061,7 +3055,7 @@ ref = "lex:com.atproto.label.defs#label"
 
 [AppBskyActorDefs.defs.profileView]
 type = "object"
-required = [ "did", "handle" ]
+required = ["did", "handle"]
 
 [AppBskyActorDefs.defs.profileView.properties.did]
 type = "string"
@@ -3106,7 +3100,7 @@ ref = "lex:com.atproto.label.defs#label"
 
 [AppBskyActorDefs.defs.profileViewDetailed]
 type = "object"
-required = [ "did", "handle" ]
+required = ["did", "handle"]
 
 [AppBskyActorDefs.defs.profileViewDetailed.properties.did]
 type = "string"
@@ -3218,12 +3212,12 @@ refs = [
     "lex:app.bsky.actor.defs#threadViewPref",
     "lex:app.bsky.actor.defs#interestsPref",
     "lex:app.bsky.actor.defs#mutedWordsPref",
-    "lex:app.bsky.actor.defs#hiddenPostsPref"
+    "lex:app.bsky.actor.defs#hiddenPostsPref",
 ]
 
 [AppBskyActorDefs.defs.adultContentPref]
 type = "object"
-required = [ "enabled" ]
+required = ["enabled"]
 
 [AppBskyActorDefs.defs.adultContentPref.properties.enabled]
 type = "boolean"
@@ -3231,7 +3225,7 @@ default = false
 
 [AppBskyActorDefs.defs.contentLabelPref]
 type = "object"
-required = [ "label", "visibility" ]
+required = ["label", "visibility"]
 
 [AppBskyActorDefs.defs.contentLabelPref.properties.labelerDid]
 type = "string"
@@ -3243,11 +3237,11 @@ type = "string"
 
 [AppBskyActorDefs.defs.contentLabelPref.properties.visibility]
 type = "string"
-knownValues = [ "ignore", "show", "warn", "hide" ]
+knownValues = ["ignore", "show", "warn", "hide"]
 
 [AppBskyActorDefs.defs.savedFeedsPref]
 type = "object"
-required = [ "pinned", "saved" ]
+required = ["pinned", "saved"]
 
 [AppBskyActorDefs.defs.savedFeedsPref.properties.pinned]
 type = "array"
@@ -3276,7 +3270,7 @@ description = "The birth date of account owner."
 
 [AppBskyActorDefs.defs.feedViewPref]
 type = "object"
-required = [ "feed" ]
+required = ["feed"]
 
 [AppBskyActorDefs.defs.feedViewPref.properties.feed]
 type = "string"
@@ -3309,7 +3303,7 @@ type = "object"
 [AppBskyActorDefs.defs.threadViewPref.properties.sort]
 type = "string"
 description = "Sorting mode for threads."
-knownValues = [ "oldest", "newest", "most-likes", "random" ]
+knownValues = ["oldest", "newest", "most-likes", "random"]
 
 [AppBskyActorDefs.defs.threadViewPref.properties.prioritizeFollowedUsers]
 type = "boolean"
@@ -3317,7 +3311,7 @@ description = "Show followed users at the top of all replies."
 
 [AppBskyActorDefs.defs.interestsPref]
 type = "object"
-required = [ "tags" ]
+required = ["tags"]
 
 [AppBskyActorDefs.defs.interestsPref.properties.tags]
 type = "array"
@@ -3331,14 +3325,14 @@ maxGraphemes = 64
 
 [AppBskyActorDefs.defs.mutedWordTarget]
 type = "string"
-knownValues = [ "content", "tag" ]
+knownValues = ["content", "tag"]
 maxLength = 640
 maxGraphemes = 64
 
 [AppBskyActorDefs.defs.mutedWord]
 type = "object"
 description = "A word that the account owner has muted."
-required = [ "value", "targets" ]
+required = ["value", "targets"]
 
 [AppBskyActorDefs.defs.mutedWord.properties.value]
 type = "string"
@@ -3356,7 +3350,7 @@ ref = "lex:app.bsky.actor.defs#mutedWordTarget"
 
 [AppBskyActorDefs.defs.mutedWordsPref]
 type = "object"
-required = [ "items" ]
+required = ["items"]
 
 [AppBskyActorDefs.defs.mutedWordsPref.properties.items]
 type = "array"
@@ -3368,7 +3362,7 @@ ref = "lex:app.bsky.actor.defs#mutedWord"
 
 [AppBskyActorDefs.defs.hiddenPostsPref]
 type = "object"
-required = [ "items" ]
+required = ["items"]
 
 [AppBskyActorDefs.defs.hiddenPostsPref.properties.items]
 type = "array"
@@ -3380,7 +3374,7 @@ format = "at-uri"
 
 [AppBskyActorDefs.defs.labelersPref]
 type = "object"
-required = [ "labelers" ]
+required = ["labelers"]
 
 [AppBskyActorDefs.defs.labelersPref.properties.labelers]
 type = "array"
@@ -3391,7 +3385,7 @@ ref = "lex:app.bsky.actor.defs#labelerPrefItem"
 
 [AppBskyActorDefs.defs.labelerPrefItem]
 type = "object"
-required = [ "did" ]
+required = ["did"]
 
 [AppBskyActorDefs.defs.labelerPrefItem.properties.did]
 type = "string"
@@ -3407,14 +3401,14 @@ description = "Get private preferences attached to the current account. Expected
 
 [AppBskyActorGetPreferences.defs.main.parameters]
 type = "params"
-properties = { }
+properties = {}
 
 [AppBskyActorGetPreferences.defs.main.output]
 encoding = "application/json"
 
 [AppBskyActorGetPreferences.defs.main.output.schema]
 type = "object"
-required = [ "preferences" ]
+required = ["preferences"]
 
 [AppBskyActorGetPreferences.defs.main.output.schema.properties.preferences]
 type = "ref"
@@ -3430,7 +3424,7 @@ description = "Get detailed profile view of an actor. Does not require auth, but
 
 [AppBskyActorGetProfile.defs.main.parameters]
 type = "params"
-required = [ "actor" ]
+required = ["actor"]
 
 [AppBskyActorGetProfile.defs.main.parameters.properties.actor]
 type = "string"
@@ -3454,7 +3448,7 @@ description = "Get detailed profile views of multiple actors."
 
 [AppBskyActorGetProfiles.defs.main.parameters]
 type = "params"
-required = [ "actors" ]
+required = ["actors"]
 
 [AppBskyActorGetProfiles.defs.main.parameters.properties.actors]
 type = "array"
@@ -3469,7 +3463,7 @@ encoding = "application/json"
 
 [AppBskyActorGetProfiles.defs.main.output.schema]
 type = "object"
-required = [ "profiles" ]
+required = ["profiles"]
 
 [AppBskyActorGetProfiles.defs.main.output.schema.properties.profiles]
 type = "array"
@@ -3503,7 +3497,7 @@ encoding = "application/json"
 
 [AppBskyActorGetSuggestions.defs.main.output.schema]
 type = "object"
-required = [ "actors" ]
+required = ["actors"]
 
 [AppBskyActorGetSuggestions.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -3541,19 +3535,19 @@ maxLength = 2_560
 [AppBskyActorProfile.defs.main.record.properties.avatar]
 type = "blob"
 description = "Small image to be displayed next to posts from account. AKA, 'profile picture'"
-accept = [ "image/png", "image/jpeg" ]
+accept = ["image/png", "image/jpeg"]
 maxSize = 1_000_000
 
 [AppBskyActorProfile.defs.main.record.properties.banner]
 type = "blob"
 description = "Larger horizontal image to display behind profile view."
-accept = [ "image/png", "image/jpeg" ]
+accept = ["image/png", "image/jpeg"]
 maxSize = 1_000_000
 
 [AppBskyActorProfile.defs.main.record.properties.labels]
 type = "union"
 description = "Self-label values, specific to the Bluesky application, on the overall account."
-refs = [ "lex:com.atproto.label.defs#selfLabels" ]
+refs = ["lex:com.atproto.label.defs#selfLabels"]
 
 [AppBskyActorPutPreferences]
 lexicon = 1
@@ -3568,7 +3562,7 @@ encoding = "application/json"
 
 [AppBskyActorPutPreferences.defs.main.input.schema]
 type = "object"
-required = [ "preferences" ]
+required = ["preferences"]
 
 [AppBskyActorPutPreferences.defs.main.input.schema.properties.preferences]
 type = "ref"
@@ -3607,7 +3601,7 @@ encoding = "application/json"
 
 [AppBskyActorSearchActors.defs.main.output.schema]
 type = "object"
-required = [ "actors" ]
+required = ["actors"]
 
 [AppBskyActorSearchActors.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -3654,7 +3648,7 @@ encoding = "application/json"
 
 [AppBskyActorSearchActorsTypeahead.defs.main.output.schema]
 type = "object"
-required = [ "actors" ]
+required = ["actors"]
 
 [AppBskyActorSearchActorsTypeahead.defs.main.output.schema.properties.actors]
 type = "array"
@@ -3670,7 +3664,7 @@ id = "app.bsky.embed.external"
 [AppBskyEmbedExternal.defs.main]
 type = "object"
 description = "A representation of some externally linked content (eg, a URL and 'card'), embedded in a Bluesky record (eg, a post)."
-required = [ "external" ]
+required = ["external"]
 
 [AppBskyEmbedExternal.defs.main.properties.external]
 type = "ref"
@@ -3678,7 +3672,7 @@ ref = "lex:app.bsky.embed.external#external"
 
 [AppBskyEmbedExternal.defs.external]
 type = "object"
-required = [ "uri", "title", "description" ]
+required = ["uri", "title", "description"]
 
 [AppBskyEmbedExternal.defs.external.properties.uri]
 type = "string"
@@ -3692,12 +3686,12 @@ type = "string"
 
 [AppBskyEmbedExternal.defs.external.properties.thumb]
 type = "blob"
-accept = [ "image/*" ]
+accept = ["image/*"]
 maxSize = 1_000_000
 
 [AppBskyEmbedExternal.defs.view]
 type = "object"
-required = [ "external" ]
+required = ["external"]
 
 [AppBskyEmbedExternal.defs.view.properties.external]
 type = "ref"
@@ -3705,7 +3699,7 @@ ref = "lex:app.bsky.embed.external#viewExternal"
 
 [AppBskyEmbedExternal.defs.viewExternal]
 type = "object"
-required = [ "uri", "title", "description" ]
+required = ["uri", "title", "description"]
 
 [AppBskyEmbedExternal.defs.viewExternal.properties.uri]
 type = "string"
@@ -3728,7 +3722,7 @@ description = "A set of images embedded in a Bluesky record (eg, a post)."
 
 [AppBskyEmbedImages.defs.main]
 type = "object"
-required = [ "images" ]
+required = ["images"]
 
 [AppBskyEmbedImages.defs.main.properties.images]
 type = "array"
@@ -3740,11 +3734,11 @@ ref = "lex:app.bsky.embed.images#image"
 
 [AppBskyEmbedImages.defs.image]
 type = "object"
-required = [ "image", "alt" ]
+required = ["image", "alt"]
 
 [AppBskyEmbedImages.defs.image.properties.image]
 type = "blob"
-accept = [ "image/*" ]
+accept = ["image/*"]
 maxSize = 1_000_000
 
 [AppBskyEmbedImages.defs.image.properties.alt]
@@ -3758,7 +3752,7 @@ ref = "lex:app.bsky.embed.images#aspectRatio"
 [AppBskyEmbedImages.defs.aspectRatio]
 type = "object"
 description = "width:height represents an aspect ratio. It may be approximate, and may not correspond to absolute dimensions in any given unit."
-required = [ "width", "height" ]
+required = ["width", "height"]
 
 [AppBskyEmbedImages.defs.aspectRatio.properties.width]
 type = "integer"
@@ -3770,7 +3764,7 @@ minimum = 1
 
 [AppBskyEmbedImages.defs.view]
 type = "object"
-required = [ "images" ]
+required = ["images"]
 
 [AppBskyEmbedImages.defs.view.properties.images]
 type = "array"
@@ -3782,7 +3776,7 @@ ref = "lex:app.bsky.embed.images#viewImage"
 
 [AppBskyEmbedImages.defs.viewImage]
 type = "object"
-required = [ "thumb", "fullsize", "alt" ]
+required = ["thumb", "fullsize", "alt"]
 
 [AppBskyEmbedImages.defs.viewImage.properties.thumb]
 type = "string"
@@ -3809,7 +3803,7 @@ description = "A representation of a record embedded in a Bluesky record (eg, a 
 
 [AppBskyEmbedRecord.defs.main]
 type = "object"
-required = [ "record" ]
+required = ["record"]
 
 [AppBskyEmbedRecord.defs.main.properties.record]
 type = "ref"
@@ -3817,7 +3811,7 @@ ref = "lex:com.atproto.repo.strongRef"
 
 [AppBskyEmbedRecord.defs.view]
 type = "object"
-required = [ "record" ]
+required = ["record"]
 
 [AppBskyEmbedRecord.defs.view.properties.record]
 type = "union"
@@ -3827,12 +3821,12 @@ refs = [
     "lex:app.bsky.embed.record#viewBlocked",
     "lex:app.bsky.feed.defs#generatorView",
     "lex:app.bsky.graph.defs#listView",
-    "lex:app.bsky.labeler.defs#labelerView"
+    "lex:app.bsky.labeler.defs#labelerView",
 ]
 
 [AppBskyEmbedRecord.defs.viewRecord]
 type = "object"
-required = [ "uri", "cid", "author", "value", "indexedAt" ]
+required = ["uri", "cid", "author", "value", "indexedAt"]
 
 [AppBskyEmbedRecord.defs.viewRecord.properties.uri]
 type = "string"
@@ -3875,7 +3869,7 @@ refs = [
     "lex:app.bsky.embed.images#view",
     "lex:app.bsky.embed.external#view",
     "lex:app.bsky.embed.record#view",
-    "lex:app.bsky.embed.recordWithMedia#view"
+    "lex:app.bsky.embed.recordWithMedia#view",
 ]
 
 [AppBskyEmbedRecord.defs.viewRecord.properties.indexedAt]
@@ -3884,7 +3878,7 @@ format = "datetime"
 
 [AppBskyEmbedRecord.defs.viewNotFound]
 type = "object"
-required = [ "uri", "notFound" ]
+required = ["uri", "notFound"]
 
 [AppBskyEmbedRecord.defs.viewNotFound.properties.uri]
 type = "string"
@@ -3896,7 +3890,7 @@ const = true
 
 [AppBskyEmbedRecord.defs.viewBlocked]
 type = "object"
-required = [ "uri", "blocked", "author" ]
+required = ["uri", "blocked", "author"]
 
 [AppBskyEmbedRecord.defs.viewBlocked.properties.uri]
 type = "string"
@@ -3917,7 +3911,7 @@ description = "A representation of a record embedded in a Bluesky record (eg, a 
 
 [AppBskyEmbedRecordWithMedia.defs.main]
 type = "object"
-required = [ "record", "media" ]
+required = ["record", "media"]
 
 [AppBskyEmbedRecordWithMedia.defs.main.properties.record]
 type = "ref"
@@ -3925,11 +3919,11 @@ ref = "lex:app.bsky.embed.record"
 
 [AppBskyEmbedRecordWithMedia.defs.main.properties.media]
 type = "union"
-refs = [ "lex:app.bsky.embed.images", "lex:app.bsky.embed.external" ]
+refs = ["lex:app.bsky.embed.images", "lex:app.bsky.embed.external"]
 
 [AppBskyEmbedRecordWithMedia.defs.view]
 type = "object"
-required = [ "record", "media" ]
+required = ["record", "media"]
 
 [AppBskyEmbedRecordWithMedia.defs.view.properties.record]
 type = "ref"
@@ -3937,10 +3931,7 @@ ref = "lex:app.bsky.embed.record#view"
 
 [AppBskyEmbedRecordWithMedia.defs.view.properties.media]
 type = "union"
-refs = [
-    "lex:app.bsky.embed.images#view",
-    "lex:app.bsky.embed.external#view"
-]
+refs = ["lex:app.bsky.embed.images#view", "lex:app.bsky.embed.external#view"]
 
 [AppBskyFeedDefs]
 lexicon = 1
@@ -3948,7 +3939,7 @@ id = "app.bsky.feed.defs"
 
 [AppBskyFeedDefs.defs.postView]
 type = "object"
-required = [ "uri", "cid", "author", "record", "indexedAt" ]
+required = ["uri", "cid", "author", "record", "indexedAt"]
 
 [AppBskyFeedDefs.defs.postView.properties.uri]
 type = "string"
@@ -3971,7 +3962,7 @@ refs = [
     "lex:app.bsky.embed.images#view",
     "lex:app.bsky.embed.external#view",
     "lex:app.bsky.embed.record#view",
-    "lex:app.bsky.embed.recordWithMedia#view"
+    "lex:app.bsky.embed.recordWithMedia#view",
 ]
 
 [AppBskyFeedDefs.defs.postView.properties.replyCount]
@@ -4019,7 +4010,7 @@ type = "boolean"
 
 [AppBskyFeedDefs.defs.feedViewPost]
 type = "object"
-required = [ "post" ]
+required = ["post"]
 
 [AppBskyFeedDefs.defs.feedViewPost.properties.post]
 type = "ref"
@@ -4031,7 +4022,7 @@ ref = "lex:app.bsky.feed.defs#replyRef"
 
 [AppBskyFeedDefs.defs.feedViewPost.properties.reason]
 type = "union"
-refs = [ "lex:app.bsky.feed.defs#reasonRepost" ]
+refs = ["lex:app.bsky.feed.defs#reasonRepost"]
 
 [AppBskyFeedDefs.defs.feedViewPost.properties.feedContext]
 type = "string"
@@ -4040,14 +4031,14 @@ maxLength = 2_000
 
 [AppBskyFeedDefs.defs.replyRef]
 type = "object"
-required = [ "root", "parent" ]
+required = ["root", "parent"]
 
 [AppBskyFeedDefs.defs.replyRef.properties.root]
 type = "union"
 refs = [
     "lex:app.bsky.feed.defs#postView",
     "lex:app.bsky.feed.defs#notFoundPost",
-    "lex:app.bsky.feed.defs#blockedPost"
+    "lex:app.bsky.feed.defs#blockedPost",
 ]
 
 [AppBskyFeedDefs.defs.replyRef.properties.parent]
@@ -4055,12 +4046,12 @@ type = "union"
 refs = [
     "lex:app.bsky.feed.defs#postView",
     "lex:app.bsky.feed.defs#notFoundPost",
-    "lex:app.bsky.feed.defs#blockedPost"
+    "lex:app.bsky.feed.defs#blockedPost",
 ]
 
 [AppBskyFeedDefs.defs.reasonRepost]
 type = "object"
-required = [ "by", "indexedAt" ]
+required = ["by", "indexedAt"]
 
 [AppBskyFeedDefs.defs.reasonRepost.properties.by]
 type = "ref"
@@ -4072,7 +4063,7 @@ format = "datetime"
 
 [AppBskyFeedDefs.defs.threadViewPost]
 type = "object"
-required = [ "post" ]
+required = ["post"]
 
 [AppBskyFeedDefs.defs.threadViewPost.properties.post]
 type = "ref"
@@ -4083,7 +4074,7 @@ type = "union"
 refs = [
     "lex:app.bsky.feed.defs#threadViewPost",
     "lex:app.bsky.feed.defs#notFoundPost",
-    "lex:app.bsky.feed.defs#blockedPost"
+    "lex:app.bsky.feed.defs#blockedPost",
 ]
 
 [AppBskyFeedDefs.defs.threadViewPost.properties.replies]
@@ -4094,12 +4085,12 @@ type = "union"
 refs = [
     "lex:app.bsky.feed.defs#threadViewPost",
     "lex:app.bsky.feed.defs#notFoundPost",
-    "lex:app.bsky.feed.defs#blockedPost"
+    "lex:app.bsky.feed.defs#blockedPost",
 ]
 
 [AppBskyFeedDefs.defs.notFoundPost]
 type = "object"
-required = [ "uri", "notFound" ]
+required = ["uri", "notFound"]
 
 [AppBskyFeedDefs.defs.notFoundPost.properties.uri]
 type = "string"
@@ -4111,7 +4102,7 @@ const = true
 
 [AppBskyFeedDefs.defs.blockedPost]
 type = "object"
-required = [ "uri", "blocked", "author" ]
+required = ["uri", "blocked", "author"]
 
 [AppBskyFeedDefs.defs.blockedPost.properties.uri]
 type = "string"
@@ -4127,7 +4118,7 @@ ref = "lex:app.bsky.feed.defs#blockedAuthor"
 
 [AppBskyFeedDefs.defs.blockedAuthor]
 type = "object"
-required = [ "did" ]
+required = ["did"]
 
 [AppBskyFeedDefs.defs.blockedAuthor.properties.did]
 type = "string"
@@ -4139,7 +4130,7 @@ ref = "lex:app.bsky.actor.defs#viewerState"
 
 [AppBskyFeedDefs.defs.generatorView]
 type = "object"
-required = [ "uri", "cid", "did", "creator", "displayName", "indexedAt" ]
+required = ["uri", "cid", "did", "creator", "displayName", "indexedAt"]
 
 [AppBskyFeedDefs.defs.generatorView.properties.uri]
 type = "string"
@@ -4207,7 +4198,7 @@ format = "at-uri"
 
 [AppBskyFeedDefs.defs.skeletonFeedPost]
 type = "object"
-required = [ "post" ]
+required = ["post"]
 
 [AppBskyFeedDefs.defs.skeletonFeedPost.properties.post]
 type = "string"
@@ -4215,7 +4206,7 @@ format = "at-uri"
 
 [AppBskyFeedDefs.defs.skeletonFeedPost.properties.reason]
 type = "union"
-refs = [ "lex:app.bsky.feed.defs#skeletonReasonRepost" ]
+refs = ["lex:app.bsky.feed.defs#skeletonReasonRepost"]
 
 [AppBskyFeedDefs.defs.skeletonFeedPost.properties.feedContext]
 type = "string"
@@ -4224,7 +4215,7 @@ maxLength = 2_000
 
 [AppBskyFeedDefs.defs.skeletonReasonRepost]
 type = "object"
-required = [ "repost" ]
+required = ["repost"]
 
 [AppBskyFeedDefs.defs.skeletonReasonRepost.properties.repost]
 type = "string"
@@ -4272,7 +4263,7 @@ knownValues = [
     "app.bsky.feed.defs#interactionRepost",
     "app.bsky.feed.defs#interactionReply",
     "app.bsky.feed.defs#interactionQuote",
-    "app.bsky.feed.defs#interactionShare"
+    "app.bsky.feed.defs#interactionShare",
 ]
 
 [AppBskyFeedDefs.defs.interaction.properties.feedContext]
@@ -4341,7 +4332,7 @@ encoding = "application/json"
 
 [AppBskyFeedDescribeFeedGenerator.defs.main.output.schema]
 type = "object"
-required = [ "did", "feeds" ]
+required = ["did", "feeds"]
 
 [AppBskyFeedDescribeFeedGenerator.defs.main.output.schema.properties.did]
 type = "string"
@@ -4360,7 +4351,7 @@ ref = "lex:app.bsky.feed.describeFeedGenerator#links"
 
 [AppBskyFeedDescribeFeedGenerator.defs.feed]
 type = "object"
-required = [ "uri" ]
+required = ["uri"]
 
 [AppBskyFeedDescribeFeedGenerator.defs.feed.properties.uri]
 type = "string"
@@ -4386,7 +4377,7 @@ key = "any"
 
 [AppBskyFeedGenerator.defs.main.record]
 type = "object"
-required = [ "did", "displayName", "createdAt" ]
+required = ["did", "displayName", "createdAt"]
 
 [AppBskyFeedGenerator.defs.main.record.properties.did]
 type = "string"
@@ -4411,7 +4402,7 @@ ref = "lex:app.bsky.richtext.facet"
 
 [AppBskyFeedGenerator.defs.main.record.properties.avatar]
 type = "blob"
-accept = [ "image/png", "image/jpeg" ]
+accept = ["image/png", "image/jpeg"]
 maxSize = 1_000_000
 
 [AppBskyFeedGenerator.defs.main.record.properties.acceptsInteractions]
@@ -4421,7 +4412,7 @@ description = "Declaration that a feed accepts feedback interactions from a clie
 [AppBskyFeedGenerator.defs.main.record.properties.labels]
 type = "union"
 description = "Self-label values"
-refs = [ "lex:com.atproto.label.defs#selfLabels" ]
+refs = ["lex:com.atproto.label.defs#selfLabels"]
 
 [AppBskyFeedGenerator.defs.main.record.properties.createdAt]
 type = "string"
@@ -4437,7 +4428,7 @@ description = "Get a list of feeds (feed generator records) created by the actor
 
 [AppBskyFeedGetActorFeeds.defs.main.parameters]
 type = "params"
-required = [ "actor" ]
+required = ["actor"]
 
 [AppBskyFeedGetActorFeeds.defs.main.parameters.properties.actor]
 type = "string"
@@ -4457,7 +4448,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetActorFeeds.defs.main.output.schema]
 type = "object"
-required = [ "feeds" ]
+required = ["feeds"]
 
 [AppBskyFeedGetActorFeeds.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -4479,7 +4470,7 @@ description = "Get a list of posts liked by an actor. Does not require auth."
 
 [AppBskyFeedGetActorLikes.defs.main.parameters]
 type = "params"
-required = [ "actor" ]
+required = ["actor"]
 
 [AppBskyFeedGetActorLikes.defs.main.parameters.properties.actor]
 type = "string"
@@ -4499,7 +4490,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetActorLikes.defs.main.output.schema]
 type = "object"
-required = [ "feed" ]
+required = ["feed"]
 
 [AppBskyFeedGetActorLikes.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -4527,7 +4518,7 @@ description = "Get a view of an actor's 'author feed' (post and reposts by the a
 
 [AppBskyFeedGetAuthorFeed.defs.main.parameters]
 type = "params"
-required = [ "actor" ]
+required = ["actor"]
 
 [AppBskyFeedGetAuthorFeed.defs.main.parameters.properties.actor]
 type = "string"
@@ -4549,7 +4540,7 @@ knownValues = [
     "posts_with_replies",
     "posts_no_replies",
     "posts_with_media",
-    "posts_and_author_threads"
+    "posts_and_author_threads",
 ]
 default = "posts_with_replies"
 
@@ -4558,7 +4549,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetAuthorFeed.defs.main.output.schema]
 type = "object"
-required = [ "feed" ]
+required = ["feed"]
 
 [AppBskyFeedGetAuthorFeed.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -4586,7 +4577,7 @@ description = "Get a hydrated feed from an actor's selected feed generator. Impl
 
 [AppBskyFeedGetFeed.defs.main.parameters]
 type = "params"
-required = [ "feed" ]
+required = ["feed"]
 
 [AppBskyFeedGetFeed.defs.main.parameters.properties.feed]
 type = "string"
@@ -4606,7 +4597,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetFeed.defs.main.output.schema]
 type = "object"
-required = [ "feed" ]
+required = ["feed"]
 
 [AppBskyFeedGetFeed.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -4631,7 +4622,7 @@ description = "Get information about a feed generator. Implemented by AppView."
 
 [AppBskyFeedGetFeedGenerator.defs.main.parameters]
 type = "params"
-required = [ "feed" ]
+required = ["feed"]
 
 [AppBskyFeedGetFeedGenerator.defs.main.parameters.properties.feed]
 type = "string"
@@ -4643,7 +4634,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetFeedGenerator.defs.main.output.schema]
 type = "object"
-required = [ "view", "isOnline", "isValid" ]
+required = ["view", "isOnline", "isValid"]
 
 [AppBskyFeedGetFeedGenerator.defs.main.output.schema.properties.view]
 type = "ref"
@@ -4667,7 +4658,7 @@ description = "Get information about a list of feed generators."
 
 [AppBskyFeedGetFeedGenerators.defs.main.parameters]
 type = "params"
-required = [ "feeds" ]
+required = ["feeds"]
 
 [AppBskyFeedGetFeedGenerators.defs.main.parameters.properties.feeds]
 type = "array"
@@ -4681,7 +4672,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetFeedGenerators.defs.main.output.schema]
 type = "object"
-required = [ "feeds" ]
+required = ["feeds"]
 
 [AppBskyFeedGetFeedGenerators.defs.main.output.schema.properties.feeds]
 type = "array"
@@ -4700,7 +4691,7 @@ description = "Get a skeleton of a feed provided by a feed generator. Auth is op
 
 [AppBskyFeedGetFeedSkeleton.defs.main.parameters]
 type = "params"
-required = [ "feed" ]
+required = ["feed"]
 
 [AppBskyFeedGetFeedSkeleton.defs.main.parameters.properties.feed]
 type = "string"
@@ -4721,7 +4712,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetFeedSkeleton.defs.main.output.schema]
 type = "object"
-required = [ "feed" ]
+required = ["feed"]
 
 [AppBskyFeedGetFeedSkeleton.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -4746,7 +4737,7 @@ description = "Get like records which reference a subject (by AT-URI and CID)."
 
 [AppBskyFeedGetLikes.defs.main.parameters]
 type = "params"
-required = [ "uri" ]
+required = ["uri"]
 
 [AppBskyFeedGetLikes.defs.main.parameters.properties.uri]
 type = "string"
@@ -4772,7 +4763,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetLikes.defs.main.output.schema]
 type = "object"
-required = [ "uri", "likes" ]
+required = ["uri", "likes"]
 
 [AppBskyFeedGetLikes.defs.main.output.schema.properties.uri]
 type = "string"
@@ -4794,7 +4785,7 @@ ref = "lex:app.bsky.feed.getLikes#like"
 
 [AppBskyFeedGetLikes.defs.like]
 type = "object"
-required = [ "indexedAt", "createdAt", "actor" ]
+required = ["indexedAt", "createdAt", "actor"]
 
 [AppBskyFeedGetLikes.defs.like.properties.indexedAt]
 type = "string"
@@ -4818,7 +4809,7 @@ description = "Get a feed of recent posts from a list (posts and reposts from an
 
 [AppBskyFeedGetListFeed.defs.main.parameters]
 type = "params"
-required = [ "list" ]
+required = ["list"]
 
 [AppBskyFeedGetListFeed.defs.main.parameters.properties.list]
 type = "string"
@@ -4839,7 +4830,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetListFeed.defs.main.output.schema]
 type = "object"
-required = [ "feed" ]
+required = ["feed"]
 
 [AppBskyFeedGetListFeed.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -4864,7 +4855,7 @@ description = "Get posts in a thread. Does not require auth, but additional meta
 
 [AppBskyFeedGetPostThread.defs.main.parameters]
 type = "params"
-required = [ "uri" ]
+required = ["uri"]
 
 [AppBskyFeedGetPostThread.defs.main.parameters.properties.uri]
 type = "string"
@@ -4890,14 +4881,14 @@ encoding = "application/json"
 
 [AppBskyFeedGetPostThread.defs.main.output.schema]
 type = "object"
-required = [ "thread" ]
+required = ["thread"]
 
 [AppBskyFeedGetPostThread.defs.main.output.schema.properties.thread]
 type = "union"
 refs = [
     "lex:app.bsky.feed.defs#threadViewPost",
     "lex:app.bsky.feed.defs#notFoundPost",
-    "lex:app.bsky.feed.defs#blockedPost"
+    "lex:app.bsky.feed.defs#blockedPost",
 ]
 
 [[AppBskyFeedGetPostThread.defs.main.errors]]
@@ -4913,7 +4904,7 @@ description = "Gets post views for a specified list of posts (by AT-URI). This i
 
 [AppBskyFeedGetPosts.defs.main.parameters]
 type = "params"
-required = [ "uris" ]
+required = ["uris"]
 
 [AppBskyFeedGetPosts.defs.main.parameters.properties.uris]
 type = "array"
@@ -4929,7 +4920,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetPosts.defs.main.output.schema]
 type = "object"
-required = [ "posts" ]
+required = ["posts"]
 
 [AppBskyFeedGetPosts.defs.main.output.schema.properties.posts]
 type = "array"
@@ -4948,7 +4939,7 @@ description = "Get a list of reposts for a given post."
 
 [AppBskyFeedGetRepostedBy.defs.main.parameters]
 type = "params"
-required = [ "uri" ]
+required = ["uri"]
 
 [AppBskyFeedGetRepostedBy.defs.main.parameters.properties.uri]
 type = "string"
@@ -4974,7 +4965,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetRepostedBy.defs.main.output.schema]
 type = "object"
-required = [ "uri", "repostedBy" ]
+required = ["uri", "repostedBy"]
 
 [AppBskyFeedGetRepostedBy.defs.main.output.schema.properties.uri]
 type = "string"
@@ -5019,7 +5010,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetSuggestedFeeds.defs.main.output.schema]
 type = "object"
-required = [ "feeds" ]
+required = ["feeds"]
 
 [AppBskyFeedGetSuggestedFeeds.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -5060,7 +5051,7 @@ encoding = "application/json"
 
 [AppBskyFeedGetTimeline.defs.main.output.schema]
 type = "object"
-required = [ "feed" ]
+required = ["feed"]
 
 [AppBskyFeedGetTimeline.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -5083,7 +5074,7 @@ key = "tid"
 
 [AppBskyFeedLike.defs.main.record]
 type = "object"
-required = [ "subject", "createdAt" ]
+required = ["subject", "createdAt"]
 
 [AppBskyFeedLike.defs.main.record.properties.subject]
 type = "ref"
@@ -5104,7 +5095,7 @@ key = "tid"
 
 [AppBskyFeedPost.defs.main.record]
 type = "object"
-required = [ "text", "createdAt" ]
+required = ["text", "createdAt"]
 
 [AppBskyFeedPost.defs.main.record.properties.text]
 type = "string"
@@ -5138,7 +5129,7 @@ refs = [
     "lex:app.bsky.embed.images",
     "lex:app.bsky.embed.external",
     "lex:app.bsky.embed.record",
-    "lex:app.bsky.embed.recordWithMedia"
+    "lex:app.bsky.embed.recordWithMedia",
 ]
 
 [AppBskyFeedPost.defs.main.record.properties.langs]
@@ -5153,7 +5144,7 @@ format = "language"
 [AppBskyFeedPost.defs.main.record.properties.labels]
 type = "union"
 description = "Self-label values for this post. Effectively content warnings."
-refs = [ "lex:com.atproto.label.defs#selfLabels" ]
+refs = ["lex:com.atproto.label.defs#selfLabels"]
 
 [AppBskyFeedPost.defs.main.record.properties.tags]
 type = "array"
@@ -5172,7 +5163,7 @@ description = "Client-declared timestamp when this post was originally created."
 
 [AppBskyFeedPost.defs.replyRef]
 type = "object"
-required = [ "root", "parent" ]
+required = ["root", "parent"]
 
 [AppBskyFeedPost.defs.replyRef.properties.root]
 type = "ref"
@@ -5185,7 +5176,7 @@ ref = "lex:com.atproto.repo.strongRef"
 [AppBskyFeedPost.defs.entity]
 type = "object"
 description = "Deprecated: use facets instead."
-required = [ "index", "type", "value" ]
+required = ["index", "type", "value"]
 
 [AppBskyFeedPost.defs.entity.properties.index]
 type = "ref"
@@ -5201,7 +5192,7 @@ type = "string"
 [AppBskyFeedPost.defs.textSlice]
 type = "object"
 description = "Deprecated. Use app.bsky.richtext instead -- A text segment. Start is inclusive, end is exclusive. Indices are for utf16-encoded strings."
-required = [ "start", "end" ]
+required = ["start", "end"]
 
 [AppBskyFeedPost.defs.textSlice.properties.start]
 type = "integer"
@@ -5222,7 +5213,7 @@ key = "tid"
 
 [AppBskyFeedRepost.defs.main.record]
 type = "object"
-required = [ "subject", "createdAt" ]
+required = ["subject", "createdAt"]
 
 [AppBskyFeedRepost.defs.main.record.properties.subject]
 type = "ref"
@@ -5242,7 +5233,7 @@ description = "Find posts matching search criteria, returning views of those pos
 
 [AppBskyFeedSearchPosts.defs.main.parameters]
 type = "params"
-required = [ "q" ]
+required = ["q"]
 
 [AppBskyFeedSearchPosts.defs.main.parameters.properties.q]
 type = "string"
@@ -5250,7 +5241,7 @@ description = "Search query string; syntax, phrase, boolean, and faceting is uns
 
 [AppBskyFeedSearchPosts.defs.main.parameters.properties.sort]
 type = "string"
-knownValues = [ "top", "latest" ]
+knownValues = ["top", "latest"]
 default = "latest"
 description = "Specifies the ranking order of results."
 
@@ -5310,7 +5301,7 @@ encoding = "application/json"
 
 [AppBskyFeedSearchPosts.defs.main.output.schema]
 type = "object"
-required = [ "posts" ]
+required = ["posts"]
 
 [AppBskyFeedSearchPosts.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -5342,7 +5333,7 @@ encoding = "application/json"
 
 [AppBskyFeedSendInteractions.defs.main.input.schema]
 type = "object"
-required = [ "interactions" ]
+required = ["interactions"]
 
 [AppBskyFeedSendInteractions.defs.main.input.schema.properties.interactions]
 type = "array"
@@ -5356,7 +5347,7 @@ encoding = "application/json"
 
 [AppBskyFeedSendInteractions.defs.main.output.schema]
 type = "object"
-properties = { }
+properties = {}
 
 [AppBskyFeedThreadgate]
 lexicon = 1
@@ -5369,7 +5360,7 @@ description = "Record defining interaction gating rules for a thread (aka, reply
 
 [AppBskyFeedThreadgate.defs.main.record]
 type = "object"
-required = [ "post", "createdAt" ]
+required = ["post", "createdAt"]
 
 [AppBskyFeedThreadgate.defs.main.record.properties.post]
 type = "string"
@@ -5385,7 +5376,7 @@ type = "union"
 refs = [
     "lex:app.bsky.feed.threadgate#mentionRule",
     "lex:app.bsky.feed.threadgate#followingRule",
-    "lex:app.bsky.feed.threadgate#listRule"
+    "lex:app.bsky.feed.threadgate#listRule",
 ]
 
 [AppBskyFeedThreadgate.defs.main.record.properties.createdAt]
@@ -5395,17 +5386,17 @@ format = "datetime"
 [AppBskyFeedThreadgate.defs.mentionRule]
 type = "object"
 description = "Allow replies from actors mentioned in your post."
-properties = { }
+properties = {}
 
 [AppBskyFeedThreadgate.defs.followingRule]
 type = "object"
 description = "Allow replies from actors you follow."
-properties = { }
+properties = {}
 
 [AppBskyFeedThreadgate.defs.listRule]
 type = "object"
 description = "Allow replies from actors on a list."
-required = [ "list" ]
+required = ["list"]
 
 [AppBskyFeedThreadgate.defs.listRule.properties.list]
 type = "string"
@@ -5422,7 +5413,7 @@ key = "tid"
 
 [AppBskyGraphBlock.defs.main.record]
 type = "object"
-required = [ "subject", "createdAt" ]
+required = ["subject", "createdAt"]
 
 [AppBskyGraphBlock.defs.main.record.properties.subject]
 type = "string"
@@ -5439,7 +5430,7 @@ id = "app.bsky.graph.defs"
 
 [AppBskyGraphDefs.defs.listViewBasic]
 type = "object"
-required = [ "uri", "cid", "name", "purpose" ]
+required = ["uri", "cid", "name", "purpose"]
 
 [AppBskyGraphDefs.defs.listViewBasic.properties.uri]
 type = "string"
@@ -5479,7 +5470,7 @@ format = "datetime"
 
 [AppBskyGraphDefs.defs.listView]
 type = "object"
-required = [ "uri", "cid", "creator", "name", "purpose", "indexedAt" ]
+required = ["uri", "cid", "creator", "name", "purpose", "indexedAt"]
 
 [AppBskyGraphDefs.defs.listView.properties.uri]
 type = "string"
@@ -5535,7 +5526,7 @@ format = "datetime"
 
 [AppBskyGraphDefs.defs.listItemView]
 type = "object"
-required = [ "uri", "subject" ]
+required = ["uri", "subject"]
 
 [AppBskyGraphDefs.defs.listItemView.properties.uri]
 type = "string"
@@ -5547,10 +5538,7 @@ ref = "lex:app.bsky.actor.defs#profileView"
 
 [AppBskyGraphDefs.defs.listPurpose]
 type = "string"
-knownValues = [
-    "app.bsky.graph.defs#modlist",
-    "app.bsky.graph.defs#curatelist"
-]
+knownValues = ["app.bsky.graph.defs#modlist", "app.bsky.graph.defs#curatelist"]
 
 [AppBskyGraphDefs.defs.modlist]
 type = "token"
@@ -5573,7 +5561,7 @@ format = "at-uri"
 [AppBskyGraphDefs.defs.notFoundActor]
 type = "object"
 description = "indicates that a handle or DID could not be resolved"
-required = [ "actor", "notFound" ]
+required = ["actor", "notFound"]
 
 [AppBskyGraphDefs.defs.notFoundActor.properties.actor]
 type = "string"
@@ -5586,7 +5574,7 @@ const = true
 [AppBskyGraphDefs.defs.relationship]
 type = "object"
 description = "lists the bi-directional graph relationships between one actor (not indicated in the object), and the target actors (the DID included in the object)"
-required = [ "did" ]
+required = ["did"]
 
 [AppBskyGraphDefs.defs.relationship.properties.did]
 type = "string"
@@ -5613,7 +5601,7 @@ key = "tid"
 
 [AppBskyGraphFollow.defs.main.record]
 type = "object"
-required = [ "subject", "createdAt" ]
+required = ["subject", "createdAt"]
 
 [AppBskyGraphFollow.defs.main.record.properties.subject]
 type = "string"
@@ -5648,7 +5636,7 @@ encoding = "application/json"
 
 [AppBskyGraphGetBlocks.defs.main.output.schema]
 type = "object"
-required = [ "blocks" ]
+required = ["blocks"]
 
 [AppBskyGraphGetBlocks.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -5670,7 +5658,7 @@ description = "Enumerates accounts which follow a specified account (actor)."
 
 [AppBskyGraphGetFollowers.defs.main.parameters]
 type = "params"
-required = [ "actor" ]
+required = ["actor"]
 
 [AppBskyGraphGetFollowers.defs.main.parameters.properties.actor]
 type = "string"
@@ -5690,7 +5678,7 @@ encoding = "application/json"
 
 [AppBskyGraphGetFollowers.defs.main.output.schema]
 type = "object"
-required = [ "subject", "followers" ]
+required = ["subject", "followers"]
 
 [AppBskyGraphGetFollowers.defs.main.output.schema.properties.subject]
 type = "ref"
@@ -5716,7 +5704,7 @@ description = "Enumerates accounts which a specified account (actor) follows."
 
 [AppBskyGraphGetFollows.defs.main.parameters]
 type = "params"
-required = [ "actor" ]
+required = ["actor"]
 
 [AppBskyGraphGetFollows.defs.main.parameters.properties.actor]
 type = "string"
@@ -5736,7 +5724,7 @@ encoding = "application/json"
 
 [AppBskyGraphGetFollows.defs.main.output.schema]
 type = "object"
-required = [ "subject", "follows" ]
+required = ["subject", "follows"]
 
 [AppBskyGraphGetFollows.defs.main.output.schema.properties.subject]
 type = "ref"
@@ -5762,7 +5750,7 @@ description = "Gets a 'view' (with additional context) of a specified list."
 
 [AppBskyGraphGetList.defs.main.parameters]
 type = "params"
-required = [ "list" ]
+required = ["list"]
 
 [AppBskyGraphGetList.defs.main.parameters.properties.list]
 type = "string"
@@ -5783,7 +5771,7 @@ encoding = "application/json"
 
 [AppBskyGraphGetList.defs.main.output.schema]
 type = "object"
-required = [ "list", "items" ]
+required = ["list", "items"]
 
 [AppBskyGraphGetList.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -5824,7 +5812,7 @@ encoding = "application/json"
 
 [AppBskyGraphGetListBlocks.defs.main.output.schema]
 type = "object"
-required = [ "lists" ]
+required = ["lists"]
 
 [AppBskyGraphGetListBlocks.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -5861,7 +5849,7 @@ encoding = "application/json"
 
 [AppBskyGraphGetListMutes.defs.main.output.schema]
 type = "object"
-required = [ "lists" ]
+required = ["lists"]
 
 [AppBskyGraphGetListMutes.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -5883,7 +5871,7 @@ description = "Enumerates the lists created by a specified account (actor)."
 
 [AppBskyGraphGetLists.defs.main.parameters]
 type = "params"
-required = [ "actor" ]
+required = ["actor"]
 
 [AppBskyGraphGetLists.defs.main.parameters.properties.actor]
 type = "string"
@@ -5904,7 +5892,7 @@ encoding = "application/json"
 
 [AppBskyGraphGetLists.defs.main.output.schema]
 type = "object"
-required = [ "lists" ]
+required = ["lists"]
 
 [AppBskyGraphGetLists.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -5941,7 +5929,7 @@ encoding = "application/json"
 
 [AppBskyGraphGetMutes.defs.main.output.schema]
 type = "object"
-required = [ "mutes" ]
+required = ["mutes"]
 
 [AppBskyGraphGetMutes.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -5963,7 +5951,7 @@ description = "Enumerates public relationships between one account, and a list o
 
 [AppBskyGraphGetRelationships.defs.main.parameters]
 type = "params"
-required = [ "actor" ]
+required = ["actor"]
 
 [AppBskyGraphGetRelationships.defs.main.parameters.properties.actor]
 type = "string"
@@ -5984,7 +5972,7 @@ encoding = "application/json"
 
 [AppBskyGraphGetRelationships.defs.main.output.schema]
 type = "object"
-required = [ "relationships" ]
+required = ["relationships"]
 
 [AppBskyGraphGetRelationships.defs.main.output.schema.properties.actor]
 type = "string"
@@ -5997,7 +5985,7 @@ type = "array"
 type = "union"
 refs = [
     "lex:app.bsky.graph.defs#relationship",
-    "lex:app.bsky.graph.defs#notFoundActor"
+    "lex:app.bsky.graph.defs#notFoundActor",
 ]
 
 [[AppBskyGraphGetRelationships.defs.main.errors]]
@@ -6014,7 +6002,7 @@ description = "Enumerates follows similar to a given account (actor). Expected u
 
 [AppBskyGraphGetSuggestedFollowsByActor.defs.main.parameters]
 type = "params"
-required = [ "actor" ]
+required = ["actor"]
 
 [AppBskyGraphGetSuggestedFollowsByActor.defs.main.parameters.properties.actor]
 type = "string"
@@ -6025,7 +6013,7 @@ encoding = "application/json"
 
 [AppBskyGraphGetSuggestedFollowsByActor.defs.main.output.schema]
 type = "object"
-required = [ "suggestions" ]
+required = ["suggestions"]
 
 [AppBskyGraphGetSuggestedFollowsByActor.defs.main.output.schema.properties.suggestions]
 type = "array"
@@ -6045,7 +6033,7 @@ key = "tid"
 
 [AppBskyGraphList.defs.main.record]
 type = "object"
-required = [ "name", "purpose", "createdAt" ]
+required = ["name", "purpose", "createdAt"]
 
 [AppBskyGraphList.defs.main.record.properties.purpose]
 type = "ref"
@@ -6072,12 +6060,12 @@ ref = "lex:app.bsky.richtext.facet"
 
 [AppBskyGraphList.defs.main.record.properties.avatar]
 type = "blob"
-accept = [ "image/png", "image/jpeg" ]
+accept = ["image/png", "image/jpeg"]
 maxSize = 1_000_000
 
 [AppBskyGraphList.defs.main.record.properties.labels]
 type = "union"
-refs = [ "lex:com.atproto.label.defs#selfLabels" ]
+refs = ["lex:com.atproto.label.defs#selfLabels"]
 
 [AppBskyGraphList.defs.main.record.properties.createdAt]
 type = "string"
@@ -6094,7 +6082,7 @@ key = "tid"
 
 [AppBskyGraphListblock.defs.main.record]
 type = "object"
-required = [ "subject", "createdAt" ]
+required = ["subject", "createdAt"]
 
 [AppBskyGraphListblock.defs.main.record.properties.subject]
 type = "string"
@@ -6116,7 +6104,7 @@ key = "tid"
 
 [AppBskyGraphListitem.defs.main.record]
 type = "object"
-required = [ "subject", "list", "createdAt" ]
+required = ["subject", "list", "createdAt"]
 
 [AppBskyGraphListitem.defs.main.record.properties.subject]
 type = "string"
@@ -6145,7 +6133,7 @@ encoding = "application/json"
 
 [AppBskyGraphMuteActor.defs.main.input.schema]
 type = "object"
-required = [ "actor" ]
+required = ["actor"]
 
 [AppBskyGraphMuteActor.defs.main.input.schema.properties.actor]
 type = "string"
@@ -6164,7 +6152,7 @@ encoding = "application/json"
 
 [AppBskyGraphMuteActorList.defs.main.input.schema]
 type = "object"
-required = [ "list" ]
+required = ["list"]
 
 [AppBskyGraphMuteActorList.defs.main.input.schema.properties.list]
 type = "string"
@@ -6183,7 +6171,7 @@ encoding = "application/json"
 
 [AppBskyGraphUnmuteActor.defs.main.input.schema]
 type = "object"
-required = [ "actor" ]
+required = ["actor"]
 
 [AppBskyGraphUnmuteActor.defs.main.input.schema.properties.actor]
 type = "string"
@@ -6202,7 +6190,7 @@ encoding = "application/json"
 
 [AppBskyGraphUnmuteActorList.defs.main.input.schema]
 type = "object"
-required = [ "list" ]
+required = ["list"]
 
 [AppBskyGraphUnmuteActorList.defs.main.input.schema.properties.list]
 type = "string"
@@ -6214,7 +6202,7 @@ id = "app.bsky.labeler.defs"
 
 [AppBskyLabelerDefs.defs.labelerView]
 type = "object"
-required = [ "uri", "cid", "creator", "indexedAt" ]
+required = ["uri", "cid", "creator", "indexedAt"]
 
 [AppBskyLabelerDefs.defs.labelerView.properties.uri]
 type = "string"
@@ -6249,7 +6237,7 @@ ref = "lex:com.atproto.label.defs#label"
 
 [AppBskyLabelerDefs.defs.labelerViewDetailed]
 type = "object"
-required = [ "uri", "cid", "creator", "policies", "indexedAt" ]
+required = ["uri", "cid", "creator", "policies", "indexedAt"]
 
 [AppBskyLabelerDefs.defs.labelerViewDetailed.properties.uri]
 type = "string"
@@ -6295,7 +6283,7 @@ format = "at-uri"
 
 [AppBskyLabelerDefs.defs.labelerPolicies]
 type = "object"
-required = [ "labelValues" ]
+required = ["labelValues"]
 
 [AppBskyLabelerDefs.defs.labelerPolicies.properties.labelValues]
 type = "array"
@@ -6323,7 +6311,7 @@ description = "Get information about a list of labeler services."
 
 [AppBskyLabelerGetServices.defs.main.parameters]
 type = "params"
-required = [ "dids" ]
+required = ["dids"]
 
 [AppBskyLabelerGetServices.defs.main.parameters.properties.dids]
 type = "array"
@@ -6341,7 +6329,7 @@ encoding = "application/json"
 
 [AppBskyLabelerGetServices.defs.main.output.schema]
 type = "object"
-required = [ "views" ]
+required = ["views"]
 
 [AppBskyLabelerGetServices.defs.main.output.schema.properties.views]
 type = "array"
@@ -6350,7 +6338,7 @@ type = "array"
 type = "union"
 refs = [
     "lex:app.bsky.labeler.defs#labelerView",
-    "lex:app.bsky.labeler.defs#labelerViewDetailed"
+    "lex:app.bsky.labeler.defs#labelerViewDetailed",
 ]
 
 [AppBskyLabelerService]
@@ -6364,7 +6352,7 @@ key = "literal:self"
 
 [AppBskyLabelerService.defs.main.record]
 type = "object"
-required = [ "policies", "createdAt" ]
+required = ["policies", "createdAt"]
 
 [AppBskyLabelerService.defs.main.record.properties.policies]
 type = "ref"
@@ -6372,7 +6360,7 @@ ref = "lex:app.bsky.labeler.defs#labelerPolicies"
 
 [AppBskyLabelerService.defs.main.record.properties.labels]
 type = "union"
-refs = [ "lex:com.atproto.label.defs#selfLabels" ]
+refs = ["lex:com.atproto.label.defs#selfLabels"]
 
 [AppBskyLabelerService.defs.main.record.properties.createdAt]
 type = "string"
@@ -6398,7 +6386,7 @@ encoding = "application/json"
 
 [AppBskyNotificationGetUnreadCount.defs.main.output.schema]
 type = "object"
-required = [ "count" ]
+required = ["count"]
 
 [AppBskyNotificationGetUnreadCount.defs.main.output.schema.properties.count]
 type = "integer"
@@ -6432,7 +6420,7 @@ encoding = "application/json"
 
 [AppBskyNotificationListNotifications.defs.main.output.schema]
 type = "object"
-required = [ "notifications" ]
+required = ["notifications"]
 
 [AppBskyNotificationListNotifications.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -6450,15 +6438,7 @@ format = "datetime"
 
 [AppBskyNotificationListNotifications.defs.notification]
 type = "object"
-required = [
-    "uri",
-    "cid",
-    "author",
-    "reason",
-    "record",
-    "isRead",
-    "indexedAt"
-]
+required = ["uri", "cid", "author", "reason", "record", "isRead", "indexedAt"]
 
 [AppBskyNotificationListNotifications.defs.notification.properties.uri]
 type = "string"
@@ -6475,7 +6455,7 @@ ref = "lex:app.bsky.actor.defs#profileView"
 [AppBskyNotificationListNotifications.defs.notification.properties.reason]
 type = "string"
 description = "Expected values are 'like', 'repost', 'follow', 'mention', 'reply', and 'quote'."
-knownValues = [ "like", "repost", "follow", "mention", "reply", "quote" ]
+knownValues = ["like", "repost", "follow", "mention", "reply", "quote"]
 
 [AppBskyNotificationListNotifications.defs.notification.properties.reasonSubject]
 type = "string"
@@ -6511,7 +6491,7 @@ encoding = "application/json"
 
 [AppBskyNotificationRegisterPush.defs.main.input.schema]
 type = "object"
-required = [ "serviceDid", "token", "platform", "appId" ]
+required = ["serviceDid", "token", "platform", "appId"]
 
 [AppBskyNotificationRegisterPush.defs.main.input.schema.properties.serviceDid]
 type = "string"
@@ -6522,7 +6502,7 @@ type = "string"
 
 [AppBskyNotificationRegisterPush.defs.main.input.schema.properties.platform]
 type = "string"
-knownValues = [ "ios", "android", "web" ]
+knownValues = ["ios", "android", "web"]
 
 [AppBskyNotificationRegisterPush.defs.main.input.schema.properties.appId]
 type = "string"
@@ -6540,7 +6520,7 @@ encoding = "application/json"
 
 [AppBskyNotificationUpdateSeen.defs.main.input.schema]
 type = "object"
-required = [ "seenAt" ]
+required = ["seenAt"]
 
 [AppBskyNotificationUpdateSeen.defs.main.input.schema.properties.seenAt]
 type = "string"
@@ -6553,7 +6533,7 @@ id = "app.bsky.richtext.facet"
 [AppBskyRichtextFacet.defs.main]
 type = "object"
 description = "Annotation of a sub-string within rich text."
-required = [ "index", "features" ]
+required = ["index", "features"]
 
 [AppBskyRichtextFacet.defs.main.properties.index]
 type = "ref"
@@ -6567,13 +6547,13 @@ type = "union"
 refs = [
     "lex:app.bsky.richtext.facet#mention",
     "lex:app.bsky.richtext.facet#link",
-    "lex:app.bsky.richtext.facet#tag"
+    "lex:app.bsky.richtext.facet#tag",
 ]
 
 [AppBskyRichtextFacet.defs.mention]
 type = "object"
 description = "Facet feature for mention of another account. The text is usually a handle, including a '@' prefix, but the facet reference is a DID."
-required = [ "did" ]
+required = ["did"]
 
 [AppBskyRichtextFacet.defs.mention.properties.did]
 type = "string"
@@ -6582,7 +6562,7 @@ format = "did"
 [AppBskyRichtextFacet.defs.link]
 type = "object"
 description = "Facet feature for a URL. The text URL may have been simplified or truncated, but the facet reference should be a complete URL."
-required = [ "uri" ]
+required = ["uri"]
 
 [AppBskyRichtextFacet.defs.link.properties.uri]
 type = "string"
@@ -6591,7 +6571,7 @@ format = "uri"
 [AppBskyRichtextFacet.defs.tag]
 type = "object"
 description = "Facet feature for a hashtag. The text usually includes a '#' prefix, but the facet reference should not (except in the case of 'double hash tags')."
-required = [ "tag" ]
+required = ["tag"]
 
 [AppBskyRichtextFacet.defs.tag.properties.tag]
 type = "string"
@@ -6601,7 +6581,7 @@ maxGraphemes = 64
 [AppBskyRichtextFacet.defs.byteSlice]
 type = "object"
 description = "Specifies the sub-string range a facet feature applies to. Start index is inclusive, end index is exclusive. Indices are zero-indexed, counting bytes of the UTF-8 encoded text. NOTE: some languages, like Javascript, use UTF-16 or Unicode codepoints for string slice indexing; in these languages, convert to byte arrays before working with facets."
-required = [ "byteStart", "byteEnd" ]
+required = ["byteStart", "byteEnd"]
 
 [AppBskyRichtextFacet.defs.byteSlice.properties.byteStart]
 type = "integer"
@@ -6617,7 +6597,7 @@ id = "app.bsky.unspecced.defs"
 
 [AppBskyUnspeccedDefs.defs.skeletonSearchPost]
 type = "object"
-required = [ "uri" ]
+required = ["uri"]
 
 [AppBskyUnspeccedDefs.defs.skeletonSearchPost.properties.uri]
 type = "string"
@@ -6625,7 +6605,7 @@ format = "at-uri"
 
 [AppBskyUnspeccedDefs.defs.skeletonSearchActor]
 type = "object"
-required = [ "did" ]
+required = ["did"]
 
 [AppBskyUnspeccedDefs.defs.skeletonSearchActor.properties.did]
 type = "string"
@@ -6659,7 +6639,7 @@ encoding = "application/json"
 
 [AppBskyUnspeccedGetPopularFeedGenerators.defs.main.output.schema]
 type = "object"
-required = [ "feeds" ]
+required = ["feeds"]
 
 [AppBskyUnspeccedGetPopularFeedGenerators.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -6681,14 +6661,14 @@ description = "Get a list of suggestions (feeds and users) tagged with categorie
 
 [AppBskyUnspeccedGetTaggedSuggestions.defs.main.parameters]
 type = "params"
-properties = { }
+properties = {}
 
 [AppBskyUnspeccedGetTaggedSuggestions.defs.main.output]
 encoding = "application/json"
 
 [AppBskyUnspeccedGetTaggedSuggestions.defs.main.output.schema]
 type = "object"
-required = [ "suggestions" ]
+required = ["suggestions"]
 
 [AppBskyUnspeccedGetTaggedSuggestions.defs.main.output.schema.properties.suggestions]
 type = "array"
@@ -6699,14 +6679,14 @@ ref = "lex:app.bsky.unspecced.getTaggedSuggestions#suggestion"
 
 [AppBskyUnspeccedGetTaggedSuggestions.defs.suggestion]
 type = "object"
-required = [ "tag", "subjectType", "subject" ]
+required = ["tag", "subjectType", "subject"]
 
 [AppBskyUnspeccedGetTaggedSuggestions.defs.suggestion.properties.tag]
 type = "string"
 
 [AppBskyUnspeccedGetTaggedSuggestions.defs.suggestion.properties.subjectType]
 type = "string"
-knownValues = [ "actor", "feed" ]
+knownValues = ["actor", "feed"]
 
 [AppBskyUnspeccedGetTaggedSuggestions.defs.suggestion.properties.subject]
 type = "string"
@@ -6722,7 +6702,7 @@ description = "Backend Actors (profile) search, returns only skeleton."
 
 [AppBskyUnspeccedSearchActorsSkeleton.defs.main.parameters]
 type = "params"
-required = [ "q" ]
+required = ["q"]
 
 [AppBskyUnspeccedSearchActorsSkeleton.defs.main.parameters.properties.q]
 type = "string"
@@ -6752,7 +6732,7 @@ encoding = "application/json"
 
 [AppBskyUnspeccedSearchActorsSkeleton.defs.main.output.schema]
 type = "object"
-required = [ "actors" ]
+required = ["actors"]
 
 [AppBskyUnspeccedSearchActorsSkeleton.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -6781,7 +6761,7 @@ description = "Backend Posts search, returns only skeleton"
 
 [AppBskyUnspeccedSearchPostsSkeleton.defs.main.parameters]
 type = "params"
-required = [ "q" ]
+required = ["q"]
 
 [AppBskyUnspeccedSearchPostsSkeleton.defs.main.parameters.properties.q]
 type = "string"
@@ -6789,7 +6769,7 @@ description = "Search query string; syntax, phrase, boolean, and faceting is uns
 
 [AppBskyUnspeccedSearchPostsSkeleton.defs.main.parameters.properties.sort]
 type = "string"
-knownValues = [ "top", "latest" ]
+knownValues = ["top", "latest"]
 default = "latest"
 description = "Specifies the ranking order of results."
 
@@ -6854,7 +6834,7 @@ encoding = "application/json"
 
 [AppBskyUnspeccedSearchPostsSkeleton.defs.main.output.schema]
 type = "object"
-required = [ "posts" ]
+required = ["posts"]
 
 [AppBskyUnspeccedSearchPostsSkeleton.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -6886,7 +6866,7 @@ encoding = "application/json"
 
 [ToolsOzoneCommunicationCreateTemplate.defs.main.input.schema]
 type = "object"
-required = [ "subject", "contentMarkdown", "name" ]
+required = ["subject", "contentMarkdown", "name"]
 
 [ToolsOzoneCommunicationCreateTemplate.defs.main.input.schema.properties.name]
 type = "string"
@@ -6925,7 +6905,7 @@ required = [
     "disabled",
     "lastUpdatedBy",
     "createdAt",
-    "updatedAt"
+    "updatedAt",
 ]
 
 [ToolsOzoneCommunicationDefs.defs.templateView.properties.id]
@@ -6972,7 +6952,7 @@ encoding = "application/json"
 
 [ToolsOzoneCommunicationDeleteTemplate.defs.main.input.schema]
 type = "object"
-required = [ "id" ]
+required = ["id"]
 
 [ToolsOzoneCommunicationDeleteTemplate.defs.main.input.schema.properties.id]
 type = "string"
@@ -6990,7 +6970,7 @@ encoding = "application/json"
 
 [ToolsOzoneCommunicationListTemplates.defs.main.output.schema]
 type = "object"
-required = [ "communicationTemplates" ]
+required = ["communicationTemplates"]
 
 [ToolsOzoneCommunicationListTemplates.defs.main.output.schema.properties.communicationTemplates]
 type = "array"
@@ -7012,7 +6992,7 @@ encoding = "application/json"
 
 [ToolsOzoneCommunicationUpdateTemplate.defs.main.input.schema]
 type = "object"
-required = [ "id" ]
+required = ["id"]
 
 [ToolsOzoneCommunicationUpdateTemplate.defs.main.input.schema.properties.id]
 type = "string"
@@ -7057,7 +7037,7 @@ required = [
     "subject",
     "subjectBlobCids",
     "createdBy",
-    "createdAt"
+    "createdAt",
 ]
 
 [ToolsOzoneModerationDefs.defs.modEventView.properties.id]
@@ -7076,15 +7056,12 @@ refs = [
     "lex:tools.ozone.moderation.defs#modEventMute",
     "lex:tools.ozone.moderation.defs#modEventEmail",
     "lex:tools.ozone.moderation.defs#modEventResolveAppeal",
-    "lex:tools.ozone.moderation.defs#modEventDivert"
+    "lex:tools.ozone.moderation.defs#modEventDivert",
 ]
 
 [ToolsOzoneModerationDefs.defs.modEventView.properties.subject]
 type = "union"
-refs = [
-    "lex:com.atproto.admin.defs#repoRef",
-    "lex:com.atproto.repo.strongRef"
-]
+refs = ["lex:com.atproto.admin.defs#repoRef", "lex:com.atproto.repo.strongRef"]
 
 [ToolsOzoneModerationDefs.defs.modEventView.properties.subjectBlobCids]
 type = "array"
@@ -7108,14 +7085,7 @@ type = "string"
 
 [ToolsOzoneModerationDefs.defs.modEventViewDetail]
 type = "object"
-required = [
-    "id",
-    "event",
-    "subject",
-    "subjectBlobs",
-    "createdBy",
-    "createdAt"
-]
+required = ["id", "event", "subject", "subjectBlobs", "createdBy", "createdAt"]
 
 [ToolsOzoneModerationDefs.defs.modEventViewDetail.properties.id]
 type = "integer"
@@ -7133,7 +7103,7 @@ refs = [
     "lex:tools.ozone.moderation.defs#modEventMute",
     "lex:tools.ozone.moderation.defs#modEventEmail",
     "lex:tools.ozone.moderation.defs#modEventResolveAppeal",
-    "lex:tools.ozone.moderation.defs#modEventDivert"
+    "lex:tools.ozone.moderation.defs#modEventDivert",
 ]
 
 [ToolsOzoneModerationDefs.defs.modEventViewDetail.properties.subject]
@@ -7142,7 +7112,7 @@ refs = [
     "lex:tools.ozone.moderation.defs#repoView",
     "lex:tools.ozone.moderation.defs#repoViewNotFound",
     "lex:tools.ozone.moderation.defs#recordView",
-    "lex:tools.ozone.moderation.defs#recordViewNotFound"
+    "lex:tools.ozone.moderation.defs#recordViewNotFound",
 ]
 
 [ToolsOzoneModerationDefs.defs.modEventViewDetail.properties.subjectBlobs]
@@ -7162,17 +7132,14 @@ format = "datetime"
 
 [ToolsOzoneModerationDefs.defs.subjectStatusView]
 type = "object"
-required = [ "id", "subject", "createdAt", "updatedAt", "reviewState" ]
+required = ["id", "subject", "createdAt", "updatedAt", "reviewState"]
 
 [ToolsOzoneModerationDefs.defs.subjectStatusView.properties.id]
 type = "integer"
 
 [ToolsOzoneModerationDefs.defs.subjectStatusView.properties.subject]
 type = "union"
-refs = [
-    "lex:com.atproto.admin.defs#repoRef",
-    "lex:com.atproto.repo.strongRef"
-]
+refs = ["lex:com.atproto.admin.defs#repoRef", "lex:com.atproto.repo.strongRef"]
 
 [ToolsOzoneModerationDefs.defs.subjectStatusView.properties.subjectBlobCids]
 type = "array"
@@ -7246,7 +7213,7 @@ knownValues = [
     "lex:tools.ozone.moderation.defs#reviewOpen",
     "lex:tools.ozone.moderation.defs#reviewEscalated",
     "lex:tools.ozone.moderation.defs#reviewClosed",
-    "lex:tools.ozone.moderation.defs#reviewNone"
+    "lex:tools.ozone.moderation.defs#reviewNone",
 ]
 
 [ToolsOzoneModerationDefs.defs.reviewOpen]
@@ -7295,7 +7262,7 @@ description = "Describe resolution."
 [ToolsOzoneModerationDefs.defs.modEventComment]
 type = "object"
 description = "Add a comment to a subject"
-required = [ "comment" ]
+required = ["comment"]
 
 [ToolsOzoneModerationDefs.defs.modEventComment.properties.comment]
 type = "string"
@@ -7307,7 +7274,7 @@ description = "Make the comment persistent on the subject"
 [ToolsOzoneModerationDefs.defs.modEventReport]
 type = "object"
 description = "Report a subject"
-required = [ "reportType" ]
+required = ["reportType"]
 
 [ToolsOzoneModerationDefs.defs.modEventReport.properties.comment]
 type = "string"
@@ -7319,7 +7286,7 @@ ref = "lex:com.atproto.moderation.defs#reasonType"
 [ToolsOzoneModerationDefs.defs.modEventLabel]
 type = "object"
 description = "Apply/Negate labels on a subject"
-required = [ "createLabelVals", "negateLabelVals" ]
+required = ["createLabelVals", "negateLabelVals"]
 
 [ToolsOzoneModerationDefs.defs.modEventLabel.properties.comment]
 type = "string"
@@ -7351,7 +7318,7 @@ type = "string"
 [ToolsOzoneModerationDefs.defs.modEventMute]
 type = "object"
 description = "Mute incoming reports on a subject"
-required = [ "durationInHours" ]
+required = ["durationInHours"]
 
 [ToolsOzoneModerationDefs.defs.modEventMute.properties.comment]
 type = "string"
@@ -7371,7 +7338,7 @@ description = "Describe reasoning behind the reversal."
 [ToolsOzoneModerationDefs.defs.modEventEmail]
 type = "object"
 description = "Keep a log of outgoing email to a user"
-required = [ "subjectLine" ]
+required = ["subjectLine"]
 
 [ToolsOzoneModerationDefs.defs.modEventEmail.properties.subjectLine]
 type = "string"
@@ -7395,7 +7362,7 @@ type = "string"
 [ToolsOzoneModerationDefs.defs.modEventTag]
 type = "object"
 description = "Add/Remove a tag on a subject"
-required = [ "add", "remove" ]
+required = ["add", "remove"]
 
 [ToolsOzoneModerationDefs.defs.modEventTag.properties.add]
 type = "array"
@@ -7417,7 +7384,7 @@ description = "Additional comment about added/removed tags."
 
 [ToolsOzoneModerationDefs.defs.repoView]
 type = "object"
-required = [ "did", "handle", "relatedRecords", "indexedAt", "moderation" ]
+required = ["did", "handle", "relatedRecords", "indexedAt", "moderation"]
 
 [ToolsOzoneModerationDefs.defs.repoView.properties.did]
 type = "string"
@@ -7456,7 +7423,7 @@ type = "string"
 
 [ToolsOzoneModerationDefs.defs.repoViewDetail]
 type = "object"
-required = [ "did", "handle", "relatedRecords", "indexedAt", "moderation" ]
+required = ["did", "handle", "relatedRecords", "indexedAt", "moderation"]
 
 [ToolsOzoneModerationDefs.defs.repoViewDetail.properties.did]
 type = "string"
@@ -7513,7 +7480,7 @@ format = "datetime"
 
 [ToolsOzoneModerationDefs.defs.repoViewNotFound]
 type = "object"
-required = [ "did" ]
+required = ["did"]
 
 [ToolsOzoneModerationDefs.defs.repoViewNotFound.properties.did]
 type = "string"
@@ -7528,7 +7495,7 @@ required = [
     "blobCids",
     "indexedAt",
     "moderation",
-    "repo"
+    "repo",
 ]
 
 [ToolsOzoneModerationDefs.defs.recordView.properties.uri]
@@ -7563,15 +7530,7 @@ ref = "lex:tools.ozone.moderation.defs#repoView"
 
 [ToolsOzoneModerationDefs.defs.recordViewDetail]
 type = "object"
-required = [
-    "uri",
-    "cid",
-    "value",
-    "blobs",
-    "indexedAt",
-    "moderation",
-    "repo"
-]
+required = ["uri", "cid", "value", "blobs", "indexedAt", "moderation", "repo"]
 
 [ToolsOzoneModerationDefs.defs.recordViewDetail.properties.uri]
 type = "string"
@@ -7612,7 +7571,7 @@ ref = "lex:tools.ozone.moderation.defs#repoView"
 
 [ToolsOzoneModerationDefs.defs.recordViewNotFound]
 type = "object"
-required = [ "uri" ]
+required = ["uri"]
 
 [ToolsOzoneModerationDefs.defs.recordViewNotFound.properties.uri]
 type = "string"
@@ -7634,7 +7593,7 @@ ref = "lex:tools.ozone.moderation.defs#subjectStatusView"
 
 [ToolsOzoneModerationDefs.defs.blobView]
 type = "object"
-required = [ "cid", "mimeType", "size", "createdAt" ]
+required = ["cid", "mimeType", "size", "createdAt"]
 
 [ToolsOzoneModerationDefs.defs.blobView.properties.cid]
 type = "string"
@@ -7654,7 +7613,7 @@ format = "datetime"
 type = "union"
 refs = [
     "lex:tools.ozone.moderation.defs#imageDetails",
-    "lex:tools.ozone.moderation.defs#videoDetails"
+    "lex:tools.ozone.moderation.defs#videoDetails",
 ]
 
 [ToolsOzoneModerationDefs.defs.blobView.properties.moderation]
@@ -7663,7 +7622,7 @@ ref = "lex:tools.ozone.moderation.defs#moderation"
 
 [ToolsOzoneModerationDefs.defs.imageDetails]
 type = "object"
-required = [ "width", "height" ]
+required = ["width", "height"]
 
 [ToolsOzoneModerationDefs.defs.imageDetails.properties.width]
 type = "integer"
@@ -7673,7 +7632,7 @@ type = "integer"
 
 [ToolsOzoneModerationDefs.defs.videoDetails]
 type = "object"
-required = [ "width", "height", "length" ]
+required = ["width", "height", "length"]
 
 [ToolsOzoneModerationDefs.defs.videoDetails.properties.width]
 type = "integer"
@@ -7697,7 +7656,7 @@ encoding = "application/json"
 
 [ToolsOzoneModerationEmitEvent.defs.main.input.schema]
 type = "object"
-required = [ "event", "subject", "createdBy" ]
+required = ["event", "subject", "createdBy"]
 
 [ToolsOzoneModerationEmitEvent.defs.main.input.schema.properties.event]
 type = "union"
@@ -7712,15 +7671,12 @@ refs = [
     "lex:tools.ozone.moderation.defs#modEventReverseTakedown",
     "lex:tools.ozone.moderation.defs#modEventUnmute",
     "lex:tools.ozone.moderation.defs#modEventEmail",
-    "lex:tools.ozone.moderation.defs#modEventTag"
+    "lex:tools.ozone.moderation.defs#modEventTag",
 ]
 
 [ToolsOzoneModerationEmitEvent.defs.main.input.schema.properties.subject]
 type = "union"
-refs = [
-    "lex:com.atproto.admin.defs#repoRef",
-    "lex:com.atproto.repo.strongRef"
-]
+refs = ["lex:com.atproto.admin.defs#repoRef", "lex:com.atproto.repo.strongRef"]
 
 [ToolsOzoneModerationEmitEvent.defs.main.input.schema.properties.subjectBlobCids]
 type = "array"
@@ -7753,7 +7709,7 @@ description = "Get details about a moderation event."
 
 [ToolsOzoneModerationGetEvent.defs.main.parameters]
 type = "params"
-required = [ "id" ]
+required = ["id"]
 
 [ToolsOzoneModerationGetEvent.defs.main.parameters.properties.id]
 type = "integer"
@@ -7775,7 +7731,7 @@ description = "Get details about a record."
 
 [ToolsOzoneModerationGetRecord.defs.main.parameters]
 type = "params"
-required = [ "uri" ]
+required = ["uri"]
 
 [ToolsOzoneModerationGetRecord.defs.main.parameters.properties.uri]
 type = "string"
@@ -7805,7 +7761,7 @@ description = "Get details about a repository."
 
 [ToolsOzoneModerationGetRepo.defs.main.parameters]
 type = "params"
-required = [ "did" ]
+required = ["did"]
 
 [ToolsOzoneModerationGetRepo.defs.main.parameters.properties.did]
 type = "string"
@@ -7846,7 +7802,7 @@ format = "did"
 [ToolsOzoneModerationQueryEvents.defs.main.parameters.properties.sortDirection]
 type = "string"
 default = "desc"
-enum = [ "asc", "desc" ]
+enum = ["asc", "desc"]
 description = "Sort direction for the events. Defaults to descending order of created at timestamp."
 
 [ToolsOzoneModerationQueryEvents.defs.main.parameters.properties.createdAfter]
@@ -7924,7 +7880,7 @@ encoding = "application/json"
 
 [ToolsOzoneModerationQueryEvents.defs.main.output.schema]
 type = "object"
-required = [ "events" ]
+required = ["events"]
 
 [ToolsOzoneModerationQueryEvents.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -7998,12 +7954,12 @@ description = "Get all subject statuses that were reviewed by a specific moderat
 [ToolsOzoneModerationQueryStatuses.defs.main.parameters.properties.sortField]
 type = "string"
 default = "lastReportedAt"
-enum = [ "lastReviewedAt", "lastReportedAt" ]
+enum = ["lastReviewedAt", "lastReportedAt"]
 
 [ToolsOzoneModerationQueryStatuses.defs.main.parameters.properties.sortDirection]
 type = "string"
 default = "desc"
-enum = [ "asc", "desc" ]
+enum = ["asc", "desc"]
 
 [ToolsOzoneModerationQueryStatuses.defs.main.parameters.properties.takendown]
 type = "boolean"
@@ -8039,7 +7995,7 @@ encoding = "application/json"
 
 [ToolsOzoneModerationQueryStatuses.defs.main.output.schema]
 type = "object"
-required = [ "subjectStatuses" ]
+required = ["subjectStatuses"]
 
 [ToolsOzoneModerationQueryStatuses.defs.main.output.schema.properties.cursor]
 type = "string"
@@ -8083,7 +8039,7 @@ encoding = "application/json"
 
 [ToolsOzoneModerationSearchRepos.defs.main.output.schema]
 type = "object"
-required = [ "repos" ]
+required = ["repos"]
 
 [ToolsOzoneModerationSearchRepos.defs.main.output.schema.properties.cursor]
 type = "string"

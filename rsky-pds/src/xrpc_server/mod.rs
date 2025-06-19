@@ -1,3 +1,1 @@
-pub mod auth;
-pub mod stream;
-pub mod types;
+pub use rsky_pds_accountmanager::xrpc_server::*;

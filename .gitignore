@@ -12,7 +12,7 @@ NOTE.md
 Rocket.toml
 *.pem
 **/data/
-db/
+#db/
 *.db
 *.db-shm
 *.db-wal

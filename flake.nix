@@ -17,11 +17,13 @@
           overlays = [ (import rust-overlay) ];
         };
         craneLib = (crane.mkLib pkgs).overrideToolchain (p: p.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
+        # craneLib = (crane.mkLib pkgs).overrideToolchain (p: p.rust-bin.stable."1.81.0".default.override {
           extensions = [
             "rust-src"
             "rust-analyzer"
           ];
         }));
+        # });
 
         inherit (pkgs) lib;
         unfilteredRoot = ./.; # The original, unfiltered source
@@ -77,7 +79,7 @@
             fileset = lib.fileset.unions [
               ./Cargo.toml
               ./Cargo.lock
-              ./rsky-pds/migrations
+              ./rsky-pds-models/migrations
               (craneLib.fileset.commonCargoSources ./cypher)
               (craneLib.fileset.commonCargoSources ./rsky-common)
               (craneLib.fileset.commonCargoSources ./rsky-crypto)
@@ -88,6 +90,10 @@
               (craneLib.fileset.commonCargoSources ./rsky-labeler)
               (craneLib.fileset.commonCargoSources ./rsky-lexicon)
               (craneLib.fileset.commonCargoSources ./rsky-pds)
+              (craneLib.fileset.commonCargoSources ./rsky-pds-accountmanager)
+              (craneLib.fileset.commonCargoSources ./rsky-pds-actorstore)
+              (craneLib.fileset.commonCargoSources ./rsky-pds-common)
+              (craneLib.fileset.commonCargoSources ./rsky-pds-models)
               (craneLib.fileset.commonCargoSources ./rsky-pdsadmin)
               (craneLib.fileset.commonCargoSources ./rsky-relay)
               (craneLib.fileset.commonCargoSources ./rsky-repo)
@@ -108,6 +114,34 @@
             postInstall = ''
               mkdir -p $out/{bin,lib/rsky-pds}
             '';
+          });
+        rsky-pds-accountmanager = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-pds-accountmanager";
+            cargoExtraArgs = "-p rsky-pds-accountmanager";
+            src = fileSetForCrate ./rsky-pds-accountmanager;
+          });
+        rsky-pds-actorstore = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-pds-actorstore";
+            cargoExtraArgs = "-p rsky-pds-actorstore";
+            src = fileSetForCrate ./rsky-pds-actorstore;
+          });
+        rsky-pds-common = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-pds-common";
+            cargoExtraArgs = "-p rsky-pds-common";
+            src = fileSetForCrate ./rsky-pds-common;
+          });
+        rsky-pds-models = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "rsky-pds-models";
+            cargoExtraArgs = "-p rsky-pds-models";
+            src = fileSetForCrate ./rsky-pds-models;
           });
         rsky-common = craneLib.buildPackage (
           individualCrateArgs
@@ -198,12 +232,12 @@
         checks = {
           # Build the crate as part of `nix flake check` for convenience
           # - rsky-pdsadmin , rsky-satnav
-          inherit rsky-pds rsky-common rsky-crypto rsky-feedgen rsky-firehose rsky-identity rsky-jetstream-subscriber rsky-lexicon rsky-relay rsky-repo rsky-syntax;
+          inherit rsky-pds rsky-pds-accountmanager rsky-pds-actorstore rsky-pds-common rsky-pds-models rsky-common rsky-crypto rsky-feedgen rsky-firehose rsky-identity rsky-jetstream-subscriber rsky-lexicon rsky-relay rsky-repo rsky-syntax;
         };
 
         packages = {
           default = rsky-pds;
-          inherit rsky-pds rsky-common rsky-crypto rsky-feedgen rsky-firehose rsky-identity rsky-jetstream-subscriber rsky-lexicon rsky-relay rsky-repo rsky-syntax;
+          inherit rsky-pds rsky-pds-accountmanager rsky-pds-actorstore rsky-pds-common rsky-pds-models rsky-common rsky-crypto rsky-feedgen rsky-firehose rsky-identity rsky-jetstream-subscriber rsky-lexicon rsky-relay rsky-repo rsky-syntax;
         };
 
         devShells.default = craneLib.devShell {

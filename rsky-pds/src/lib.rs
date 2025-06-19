@@ -1,13 +1,8 @@
 #[macro_use]
-extern crate serde_derive;
-extern crate core;
-extern crate mailchecker;
 extern crate serde;
 use crate::read_after_write::viewer::{LocalViewer, LocalViewerCreator, LocalViewerCreatorParams};
 use crate::sequencer::Sequencer;
 use atrium_xrpc_client::reqwest::ReqwestClient;
-use event_emitter_rs::EventEmitter;
-use lazy_static::lazy_static;
 pub mod account_manager;
 pub mod actor_store;
 pub mod apis;
@@ -15,17 +10,14 @@ pub mod auth_verifier;
 pub mod config;
 pub mod context;
 pub mod crawlers;
-pub mod db;
 pub mod handle;
 pub mod image;
 pub mod lexicon;
 pub mod mailer;
-pub mod models;
 pub mod pipethrough;
 pub mod plc;
 pub mod read_after_write;
 pub mod repo;
-pub mod schema;
 pub mod sequencer;
 pub mod well_known;
 pub mod xrpc_server;
@@ -35,40 +27,34 @@ use crate::crawlers::Crawlers;
 use crate::db::DbConn;
 use crate::models::{ErrorCode, ErrorMessageResponse, ServerVersion};
 use diesel::prelude::*;
-use rocket::{catch, catchers, get, options, routes, Build, Rocket};
+use rocket::{Build, Rocket, catch, catchers, get, options, routes};
 
-pub static APP_USER_AGENT: &str = concat!(
-    env!("CARGO_PKG_HOMEPAGE"),
-    "@",
-    env!("CARGO_PKG_NAME"),
-    "/",
-    env!("CARGO_PKG_VERSION"),
-);
+pub mod db {
+    pub use rsky_pds_models::db::*;
+}
+pub mod models {
+    pub use rsky_pds_models::models::*;
+}
+pub mod schema {
+    pub use rsky_pds_models::schema::*;
+}
+
+pub use rsky_pds_common::APP_USER_AGENT;
 
 pub struct SharedSequencer {
     pub sequencer: RwLock<Sequencer>,
 }
 
-pub struct SharedIdResolver {
-    pub id_resolver: RwLock<IdResolver>,
-}
+pub use rsky_pds_common::SharedIdResolver;
 
-pub struct SharedLocalViewer {
-    pub local_viewer: RwLock<LocalViewerCreator>,
-}
+pub use rsky_pds_actorstore::SharedLocalViewer;
 
 pub struct SharedATPAgent {
     pub app_view_agent: Option<RwLock<AtpServiceClient<ReqwestClient>>>,
 }
 
-// Use lazy_static! because the size of EventEmitter is not known at compile time
-lazy_static! {
-    // Export the emitter with `pub` keyword
-    pub static ref EVENT_EMITTER: RwLock<EventEmitter> = RwLock::new(EventEmitter::new());
-}
-
 extern crate rocket;
-use crate::apis::{app, bsky_api_get_forwarder, bsky_api_post_forwarder, com, ApiError};
+use crate::apis::{ApiError, app, bsky_api_get_forwarder, bsky_api_post_forwarder, com};
 use atrium_api::client::AtpServiceClient;
 use atrium_xrpc_client::reqwest::ReqwestClientBuilder;
 use diesel::sql_types::Int4;
@@ -86,8 +72,8 @@ use rocket::serde::json::Json;
 use rocket::shield::{NoSniff, Shield};
 use rocket::{Request, Response};
 use rsky_common::env::env_list;
-use rsky_identity::types::{DidCache, IdentityResolverOpts};
 use rsky_identity::IdResolver;
+use rsky_identity::types::{DidCache, IdentityResolverOpts};
 use std::env;
 use tokio::sync::RwLock;
 

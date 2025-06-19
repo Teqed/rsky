@@ -4,7 +4,7 @@ version = "0.1.1"
 authors = ["Rudy Fraser <him@rudyfraser.com>"]
 description = "Rust reference implementation of an atproto PDS."
 license = "Apache-2.0"
-edition = "2021"
+edition = "2024"
 publish = false
 homepage = "https://blackskyweb.xyz"
 repository = "https://github.com/blacksky-algorithms/rsky/tree/main/rsky-pds"
@@ -48,6 +48,10 @@ rsky-common = { workspace = true }
 rsky-crypto = { workspace = true }
 rsky-identity = { workspace = true }
 rsky-lexicon = { workspace = true }
+rsky-pds-actorstore = { workspace = true }
+rsky-pds-accountmanager = { workspace = true }
+rsky-pds-common = { workspace = true }
+rsky-pds-models = { workspace = true }
 rsky-repo = { workspace = true }
 rsky-syntax = { workspace = true }
 secp256k1 = { workspace = true }

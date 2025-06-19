@@ -1,6 +1,5 @@
 use crate::{plc, SharedIdResolver};
 use anyhow::{bail, Result};
-use rand::{distributions::Alphanumeric, Rng};
 use rocket::form::validate::Contains;
 use rocket::State;
 use rsky_common::env::{env_int, env_str};
@@ -16,17 +15,7 @@ pub struct AssertionContents {
     pub rotation_keys: Option<Vec<String>>,
 }
 
-/// Formatted xxxxx-xxxxx
-pub fn get_random_token() -> String {
-    let token: String = rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(50)
-        .map(char::from)
-        .collect();
-    //Bluesky Client doesn't support 1,8,9,0 in the email verification tokens
-    let allowed_token = token.replace(&['1', '8', '9', '0'][..], "");
-    allowed_token[0..5].to_owned() + "-" + &allowed_token[5..10]
-}
+pub use rsky_pds_accountmanager::apis::com::atproto::server::get_random_token;
 
 #[tracing::instrument(skip_all)]
 pub async fn safe_resolve_did_doc(
