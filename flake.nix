@@ -40,7 +40,7 @@
           strictDeps = true;
           nativeBuildInputs = with pkgs; [
             pkg-config
-            gcc
+            # gcc
           ];
           buildInputs = [
             # Add additional build inputs here
@@ -253,7 +253,7 @@
           # Extra inputs can be added here; cargo and rustc are provided by default.
           packages = with pkgs; [
             openssl
-            gcc
+            # gcc
             sqlx-cli
             bacon
             sqlite
