@@ -16,10 +16,7 @@ rsky-common = { workspace = true }
 rocket = { version = "=0.5.1", features = ["json"] }
 serde = { version = "1.0.160", features = ["derive"] }
 serde_derive = "^1.0"
-serde_bytes = "0.11.9"
-serde_ipld_dagcbor = "0.3.0"
 serde_json = "1.0.96"
-serde_cbor = "0.11.2"
 diesel = { version = "=2.1.5", features = ["chrono", "postgres"] }
 dotenvy = "0.15"
 chrono = "0.4.26"
@@ -33,10 +30,6 @@ chrono-tz = "0.10.1"
 [dependencies.rocket_sync_db_pools]
 version = "=0.1.0"
 features = ["diesel_postgres_pool"]
-
-[dependencies.reqwest]
-version = "^0.11"
-features = ["json", "multipart"]
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
