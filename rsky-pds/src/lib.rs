@@ -197,7 +197,7 @@ pub async fn build_rocket(cfg: Option<RocketConfig>) -> Rocket<Build> {
     };
 
     let cfg = env_to_cfg();
-    let hostname = env_str("PDS_ADDRESS").unwrap_or("0.0.0.0".to_string());
+    let address = env_str("PDS_ADDRESS").unwrap_or("0.0.0.0".to_string());
     let figment = rocket::Config::figment()
         .merge(("databases", map!["pg_db" => db]))
         .merge(("limits", Limits::default().limit("file", 100.mebibytes())))
