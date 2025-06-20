@@ -1,13 +1,13 @@
 use anyhow::Result;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use dotenvy::dotenv;
 use rocket_sync_db_pools::database;
 use std::env;
 use std::fmt::{Debug, Formatter};
 
-const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+// const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[database("pg_db")]
 pub struct DbConn(PgConnection);
@@ -27,7 +27,7 @@ pub fn establish_connection_for_sequencer() -> Result<PgConnection> {
         let context = format!("Error connecting to {database_url:?}");
         anyhow::Error::new(error).context(context)
     })?;
-    result.run_pending_migrations(MIGRATIONS).unwrap();
+    // result.run_pending_migrations(MIGRATIONS).unwrap();
 
     Ok(result)
 }

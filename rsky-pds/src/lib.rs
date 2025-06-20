@@ -217,9 +217,9 @@ pub async fn build_rocket(cfg: Option<RocketConfig>) -> Rocket<Build> {
         Ok(path) => std::path::PathBuf::from(path),
         Err(_) => {
             tracing::warn!(
-                "PDS_BLOBSTORE_DISK_LOCATION not set, using default path (/var/lib/pds/blocks)"
+                "PDS_BLOBSTORE_DISK_LOCATION not set, using default path (/var/lib/rsky-pds/blocks)"
             );
-            std::path::PathBuf::from("/var/lib/pds/blocks")
+            std::path::PathBuf::from("/var/lib/rsky-pds/blocks")
         }
     };
 

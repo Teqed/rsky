@@ -6,7 +6,7 @@ use std::process::Command;
 use crate::util::env;
 
 // Define the embedded migrations using a relative path
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../rsky-pds/migrations");
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../rsky-pds-models/migrations");
 
 #[derive(Subcommand, Debug)]
 pub enum RskyPdsCommands {
@@ -70,7 +70,7 @@ fn run_embedded_migrations(database_url: &str) -> Result<()> {
 /// Run migrations using diesel CLI
 fn run_diesel_cli(database_url: &str) -> Result<()> {
     // Find the path to the migrations directory (relative path)
-    let migrations_dir = "../rsky-pds/migrations";
+    let migrations_dir = "../rsky-pds-models/migrations";
 
     // Set up the diesel CLI command
     let output = Command::new("diesel")

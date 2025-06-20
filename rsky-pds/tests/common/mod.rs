@@ -1,6 +1,6 @@
 use anyhow::Result;
 use diesel::{Connection, PgConnection};
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use http_auth_basic::Credentials;
 use rocket::http::{ContentType, Header};
 use rocket::local::asynchronous::Client;
@@ -8,13 +8,13 @@ use rocket::serde::json::json;
 use rsky_common::env::env_str;
 use rsky_lexicon::com::atproto::server::CreateInviteCodeOutput;
 use rsky_pds::config::ServerConfig;
-use rsky_pds::{build_rocket, RocketConfig};
-use testcontainers::runners::AsyncRunner;
+use rsky_pds::{RocketConfig, build_rocket};
 use testcontainers::ContainerAsync;
+use testcontainers::runners::AsyncRunner;
 use testcontainers_modules::postgres;
 use testcontainers_modules::postgres::Postgres;
 
-const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+// const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../rsky-pds-models/migrations");
 
 /**
     Establish connection to the testcontainer postgres
@@ -50,7 +50,7 @@ pub async fn get_postgres() -> ContainerAsync<Postgres> {
     let connection_string = format!("postgres://postgres:postgres@localhost:{port}/postgres",);
     let mut conn =
         establish_connection(connection_string.as_str()).expect("Connection  Established");
-    conn.run_pending_migrations(MIGRATIONS).unwrap();
+    // conn.run_pending_migrations(MIGRATIONS).unwrap();
     postgres
 }
 
