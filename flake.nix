@@ -420,7 +420,7 @@
                     EnvironmentFile = cfg.environmentFiles;
                     User = "pds";
                     Group = "pds";
-                    StateDirectory = "pds";
+                    StateDirectory = "rsky-pds";
                     StateDirectoryMode = "0755";
                     Restart = "always";
 
@@ -448,7 +448,7 @@
                     ];
                     RestrictRealtime = true;
                     DeviceAllow = [ "" ];
-                    ProtectSystem = "strict";
+                    ProtectSystem = "full";
                     ProtectProc = "invisible";
                     ProcSubset = "pid";
                     ProtectHome = true;
