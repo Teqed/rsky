@@ -195,10 +195,11 @@ pub async fn build_rocket(cfg: Option<RocketConfig>) -> Rocket<Build> {
         "timeout" => 30.into(),
     };
 
+    let cfg = env_to_cfg();
     let figment = rocket::Config::figment()
         .merge(("databases", map!["pg_db" => db]))
-        .merge(("limits", Limits::default().limit("file", 100.mebibytes())));
-    let cfg = env_to_cfg();
+        .merge(("limits", Limits::default().limit("file", 100.mebibytes())))
+        .merge(("port", cfg.service.port));
 
     let sequencer = SharedSequencer {
         sequencer: RwLock::new(Sequencer::new(
