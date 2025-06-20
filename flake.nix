@@ -40,7 +40,6 @@
           strictDeps = true;
           nativeBuildInputs = with pkgs; [
             pkg-config
-            # gcc
           ];
           buildInputs = [
             # Add additional build inputs here
@@ -474,17 +473,17 @@
                     }
                   ];
                   ensureDatabases = [ "pds" ];
-                    identMap = ''
-                        # ArbitraryMapName systemUser DBUser
-                        superuser_map      root      postgres
-                        superuser_map      postgres  postgres
-                        superuser_map      pds       pds
-                    '';
-                    authentication = pkgs.lib.mkOverride 10 ''
-                      #type database  DBuser  auth-method optional_ident_map
-                      local postgres  postgres peer       map=superuser_map
-                      local pds       pds     peer        map=superuser_map
-                    '';
+                    # identMap = ''
+                    #     # ArbitraryMapName systemUser DBUser
+                    #     superuser_map      root      postgres
+                    #     superuser_map      postgres  postgres
+                    #     superuser_map      pds       pds
+                    # '';
+                    # authentication = pkgs.lib.mkOverride 10 ''
+                    #   #type database  DBuser  auth-method optional_ident_map
+                    #   local postgres  postgres peer       map=superuser_map
+                    #   local pds       pds     peer        map=superuser_map
+                    # '';
                   package = mkForce pkgs.postgresql_16;
                     };
                 };
