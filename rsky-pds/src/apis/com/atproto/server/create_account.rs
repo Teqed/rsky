@@ -1,22 +1,22 @@
+use crate::SharedSequencer;
 use crate::account_manager::helpers::account::AccountStatus;
 use crate::account_manager::{AccountManager, CreateAccountOpts};
-use crate::actor_store::blob::fs::BlobStoreFs;
 use crate::actor_store::ActorStore;
-use crate::apis::com::atproto::server::safe_resolve_did_doc;
+use crate::actor_store::blob::fs::BlobStoreFs;
 use crate::apis::ApiError;
+use crate::apis::com::atproto::server::safe_resolve_did_doc;
 use crate::auth_verifier::UserDidAuthOptional;
 use crate::config::ServerConfig;
 use crate::db::DbConn;
-use crate::handle::{normalize_and_validate_handle, HandleValidationContext, HandleValidationOpts};
-use crate::plc::operations::{create_op, CreateAtprotoOpInput};
+use crate::handle::{HandleValidationContext, HandleValidationOpts, normalize_and_validate_handle};
+use crate::plc::operations::{CreateAtprotoOpInput, create_op};
 use crate::plc::types::{OpOrTombstone, Operation};
 use crate::sequencer::events::sync_evt_data_from_commit;
-use crate::SharedSequencer;
-use crate::{plc, SharedIdResolver};
+use crate::{SharedIdResolver, plc};
 
 use email_address::*;
-use rocket::serde::json::Json;
 use rocket::State;
+use rocket::serde::json::Json;
 use rsky_common::env::env_str;
 use rsky_crypto::utils::encode_did_key;
 use rsky_lexicon::com::atproto::server::{CreateAccountInput, CreateAccountOutput};
@@ -105,7 +105,8 @@ pub async fn server_create_account(
                 Ok(_) => {
                     tracing::info!("Succesfully sent PLC Operation")
                 }
-                Err(_) => {
+                Err(err) => {
+                    tracing::error!("{err}");
                     tracing::error!("Failed to create did:plc");
                     actor_store.destroy().await?;
                     return Err(ApiError::RuntimeError);
